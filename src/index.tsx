@@ -456,10 +456,14 @@ const Content = () => {
   );
 };
 
-export default definePlugin((serverApi: any) => {
+export default definePlugin(() => {
   return {
-    title: <div className={staticClasses.Title}>Zapret & WARP</div>,
+    name: "Zapret & WARP",
+    titleView: <div className={staticClasses.Title}>Zapret & WARP</div>,
     content: <Content />,
     icon: <FaShieldAlt />,
+    onDismount() {
+      // Очистка
+    },
   };
 });

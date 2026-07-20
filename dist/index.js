@@ -356,11 +356,15 @@ const Content = () => {
     const isServiceActive = status.mode === "zapret" ? status.zapret_active : status.mode === "warp" ? status.warp_active : false;
     return (SP_JSX.jsxs(DFL.PanelSection, { title: t.pluginTitle, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.modeTitle, rgOptions: modeOptions, selectedOption: status.mode, onChange: (opt) => handleModeChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [SP_JSX.jsx("span", { children: t.statusTitle }), SP_JSX.jsx("span", { style: { color: isServiceActive ? "#4caf50" : "#f44336", fontWeight: "bold" }, children: isServiceActive ? t.statusActive : t.statusInactive })] }) }), status.mode === "zapret" && (SP_JSX.jsxs(DFL.PanelSection, { title: t.zapretSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.strategySelect, rgOptions: strategyOptions, selectedOption: status.current_strategy, onChange: (opt) => handleStrategyChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleEditHostlist, children: t.editHostlist }) })] })), status.mode === "warp" && (SP_JSX.jsxs(DFL.PanelSection, { title: t.warpSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }))] }));
 };
-var index = definePlugin((serverApi) => {
+var index = definePlugin(() => {
     return {
-        title: SP_JSX.jsx("div", { className: DFL.staticClasses.Title, children: "Zapret & WARP" }),
+        name: "Zapret & WARP",
+        titleView: SP_JSX.jsx("div", { className: DFL.staticClasses.Title, children: "Zapret & WARP" }),
         content: SP_JSX.jsx(Content, {}),
         icon: SP_JSX.jsx(FaShieldAlt, {}),
+        onDismount() {
+            // Очистка
+        },
     };
 });
 
