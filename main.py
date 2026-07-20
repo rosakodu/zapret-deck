@@ -9,9 +9,8 @@ import traceback as _traceback
 
 # Настройка путей для импорта
 plugin_dir = os.path.dirname(os.path.abspath(__file__))
-py_modules_path = os.path.join(plugin_dir, "py_modules")
-if py_modules_path not in sys.path:
-    sys.path.insert(0, py_modules_path)
+if plugin_dir not in sys.path:
+    sys.path.insert(0, plugin_dir)
 
 import decky
 
