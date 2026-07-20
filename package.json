@@ -1,0 +1,53 @@
+{
+  "name": "zapret-deck",
+  "version": "1.0.0",
+  "description": "Standalone Zapret and WARP (MASQUE) bypass for Decky Loader",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rosakodu/zapret-deck.git"
+  },
+  "keywords": [
+    "decky",
+    "plugin",
+    "steam-deck",
+    "deck",
+    "vpn",
+    "zapret",
+    "warp",
+    "masque"
+  ],
+  "author": "rosakodu",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/rosakodu/zapret-deck/issues"
+  },
+  "homepage": "https://github.com/rosakodu/zapret-deck#readme",
+  "devDependencies": {
+    "@decky/rollup": "^1.0.2",
+    "@decky/ui": "^4.11.0",
+    "@types/react": "19.1.1",
+    "@types/react-dom": "19.1.1",
+    "@types/webpack": "^5.28.5",
+    "rollup": "^4.53.3",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@decky/api": "^1.1.3",
+    "react-icons": "^5.3.0",
+    "tslib": "^2.7.0"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "react",
+        "react-dom"
+      ]
+    }
+  }
+}

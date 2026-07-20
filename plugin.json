@@ -1,0 +1,20 @@
+{
+  "name": "zapret-deck",
+  "author": "rosakodu",
+  "flags": [
+    "root"
+  ],
+  "api_version": 1,
+  "publish": {
+    "tags": [
+      "zapret",
+      "root",
+      "warp",
+      "masque",
+      "vpn",
+      "bypass"
+    ],
+    "description": "Standalone Zapret and WARP (MASQUE) bypass for Decky Loader",
+    "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
+  }
+}
