@@ -4,8 +4,6 @@
 
 一款獨立的 Steam Deck Decky Loader 插件，結合了通過 **Zapret**（nfqws）的 DPI 繞過和通過 **Cloudflare WARP（MASQUE 協議）**的安全 VPN 隧道 — 無需任何外部應用程式，直接在遊戲模式下繞過網際網路審查和限速（包括 YouTube 和 Discord）。
 
-> **注意：** 此插件完全獨立。無需安裝 Amnezia VPN、warp-cli 或任何桌面 GUI 管理器。所有二進位檔案均已內建。
-
 ![截圖](assets/screenshot.png)
 
 ## 📋 功能

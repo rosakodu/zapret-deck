@@ -84,7 +84,7 @@ function FaShieldAlt (props) {
 }
 
 const getStatus = callable("get_status");
-const setMode = callable("set_mode");
+const setServiceState = callable("set_service_state");
 const getStrategies = callable("get_strategies");
 const applyStrategy = callable("apply_strategy");
 const generateWarp = callable("generate_warp");
@@ -94,12 +94,10 @@ const startAutotune = callable("start_autotune");
 const getSteamLanguage = callable("get_steam_language");
 const translations = {
     english: {
-        pluginTitle: "Zapret & WARP Bypass",
-        modeTitle: "Operation Mode",
-        modeOff: "Disabled",
-        modeZapret: "Zapret (DPI Bypass)",
-        modeWarp: "WARP (MASQUE VPN)",
-        statusTitle: "Service Status",
+        pluginTitle: "Zapret Deck",
+        zapretTitle: "Zapret Bypass",
+        warpTitle: "WARP MASQUE VPN",
+        statusTitle: "Status",
         statusActive: "Active",
         statusInactive: "Inactive",
         zapretSettings: "Zapret Settings",
@@ -124,14 +122,12 @@ const translations = {
         appliedStrategy: "Applied strategy",
     },
     russian: {
-        pluginTitle: "Обход Блокировок Zapret & WARP",
-        modeTitle: "Режим работы",
-        modeOff: "Выключен",
-        modeZapret: "Zapret (Обход DPI)",
-        modeWarp: "WARP (MASQUE VPN)",
-        statusTitle: "Состояние службы",
-        statusActive: "Активна",
-        statusInactive: "Неактивна",
+        pluginTitle: "Zapret Deck",
+        zapretTitle: "Обход Zapret",
+        warpTitle: "WARP MASQUE VPN",
+        statusTitle: "Состояние",
+        statusActive: "Активен",
+        statusInactive: "Неактивен",
         zapretSettings: "Настройки Zapret",
         warpSettings: "Настройки WARP",
         strategySelect: "Стратегия обхода",
@@ -154,14 +150,12 @@ const translations = {
         appliedStrategy: "Применена стратегия",
     },
     ukrainian: {
-        pluginTitle: "Обхід Блокувань Zapret & WARP",
-        modeTitle: "Режим роботи",
-        modeOff: "Вимкнено",
-        modeZapret: "Zapret (Обхід DPI)",
-        modeWarp: "WARP (MASQUE VPN)",
-        statusTitle: "Стан служби",
-        statusActive: "Активна",
-        statusInactive: "Неактивна",
+        pluginTitle: "Zapret Deck",
+        zapretTitle: "Обхід Zapret",
+        warpTitle: "WARP MASQUE VPN",
+        statusTitle: "Стан",
+        statusActive: "Активний",
+        statusInactive: "Неактивний",
         zapretSettings: "Налаштування Zapret",
         warpSettings: "Налаштування WARP",
         strategySelect: "Стратегія обходу",
@@ -184,12 +178,10 @@ const translations = {
         appliedStrategy: "Застосовано стратегію",
     },
     turkish: {
-        pluginTitle: "Zapret & WARP Engelleme Kaldırıcı",
-        modeTitle: "Çalışma Modu",
-        modeOff: "Devre Dışı",
-        modeZapret: "Zapret (DPI Atlatma)",
-        modeWarp: "WARP (MASQUE VPN)",
-        statusTitle: "Servis Durumu",
+        pluginTitle: "Zapret Deck",
+        zapretTitle: "Zapret Atlatma",
+        warpTitle: "WARP MASQUE VPN",
+        statusTitle: "Durum",
         statusActive: "Aktif",
         statusInactive: "Pasif",
         zapretSettings: "Zapret Ayarları",
@@ -247,19 +239,19 @@ const Content = () => {
         getHostlist().then((hosts) => setHostlist(hosts || "")).catch(() => setHostlist(""));
         return () => clearInterval(interval);
     }, [refreshStatus]);
-    const handleModeChange = async (mode) => {
+    const handleServiceToggle = async (service, enabled) => {
         try {
-            const res = await setMode(mode);
+            const res = await setServiceState(service, enabled);
             if (res.success) {
                 toaster.toast({
                     title: t.pluginTitle,
-                    body: `${t.modeTitle}: ${mode === "off" ? t.modeOff : mode === "zapret" ? t.modeZapret : t.modeWarp}`,
+                    body: `${service === "zapret" ? t.zapretTitle : t.warpTitle}: ${enabled ? t.statusActive : t.statusInactive}`,
                 });
             }
             else {
                 toaster.toast({
                     title: t.error,
-                    body: res.error || "Failed to switch mode",
+                    body: res.error || "Failed to toggle service",
                 });
             }
             refreshStatus();
@@ -344,22 +336,16 @@ const Content = () => {
     if (!status) {
         return SP_JSX.jsx(DFL.PanelSection, { children: SP_JSX.jsx(DFL.PanelSectionRow, { children: "Loading..." }) });
     }
-    const modeOptions = [
-        { data: "off", label: t.modeOff },
-        { data: "zapret", label: t.modeZapret },
-        { data: "warp", label: t.modeWarp },
-    ];
     const strategyOptions = strategies.map((s) => ({
         data: s.args,
         label: s.name,
     }));
-    const isServiceActive = status.mode === "zapret" ? status.zapret_active : status.mode === "warp" ? status.warp_active : false;
-    return (SP_JSX.jsxs(DFL.PanelSection, { title: t.pluginTitle, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.modeTitle, rgOptions: modeOptions, selectedOption: status.mode, onChange: (opt) => handleModeChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [SP_JSX.jsx("span", { children: t.statusTitle }), SP_JSX.jsx("span", { style: { color: isServiceActive ? "#4caf50" : "#f44336", fontWeight: "bold" }, children: isServiceActive ? t.statusActive : t.statusInactive })] }) }), status.mode === "zapret" && (SP_JSX.jsxs(DFL.PanelSection, { title: t.zapretSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.strategySelect, rgOptions: strategyOptions, selectedOption: status.current_strategy, onChange: (opt) => handleStrategyChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleEditHostlist, children: t.editHostlist }) })] })), status.mode === "warp" && (SP_JSX.jsxs(DFL.PanelSection, { title: t.warpSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }))] }));
+    return (SP_JSX.jsxs(DFL.PanelSection, { title: t.pluginTitle, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: t.zapretTitle, checked: status.zapret_enabled, onChange: (val) => handleServiceToggle("zapret", val) }) }), status.zapret_enabled && (SP_JSX.jsxs(DFL.PanelSection, { title: t.zapretSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.strategySelect, rgOptions: strategyOptions, selectedOption: status.current_strategy, onChange: (opt) => handleStrategyChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleEditHostlist, children: t.editHostlist }) })] })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: t.warpTitle, checked: status.warp_enabled, onChange: (val) => handleServiceToggle("warp", val) }) }), status.warp_enabled && (SP_JSX.jsxs(DFL.PanelSection, { title: t.warpSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }))] }));
 };
 var index = definePlugin(() => {
     return {
-        name: "Zapret & WARP",
-        titleView: SP_JSX.jsx("div", { className: DFL.staticClasses.Title, children: "Zapret & WARP" }),
+        name: "Zapret Deck",
+        titleView: SP_JSX.jsx("div", { className: DFL.staticClasses.Title, children: "Zapret Deck" }),
         content: SP_JSX.jsx(Content, {}),
         icon: SP_JSX.jsx(FaShieldAlt, {}),
         onDismount() {

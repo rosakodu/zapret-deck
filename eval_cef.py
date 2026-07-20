@@ -1,7 +1,6 @@
 import asyncio
 import aiohttp
 import json
-import sys
 
 async def main():
     async with aiohttp.ClientSession() as session:
@@ -19,15 +18,11 @@ async def main():
             return
 
         async with session.ws_connect(ws_url) as ws:
-            expr = "JSON.stringify(Object.keys(window).filter(k => k.toLowerCase().includes('decky')))"
-            if len(sys.argv) > 1:
-                expr = sys.argv[1]
-                
             await ws.send_json({
                 "id": 100,
                 "method": "Runtime.evaluate",
                 "params": {
-                    "expression": expr,
+                    "expression": "JSON.stringify(window.DeckyPluginLoader.plugins.find(p => p.name === 'zapret-deck'))",
                     "returnByValue": True
                 }
             })

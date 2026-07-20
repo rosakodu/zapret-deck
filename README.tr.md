@@ -4,8 +4,6 @@
 
 Steam Deck için bağımsız bir Decky Loader eklentisi; **Zapret** (nfqws) üzerinden DPI atlatma ve **Cloudflare WARP (MASQUE protokolü)** üzerinden güvenli VPN tünelini birleştirir — herhangi bir harici uygulama olmadan oyun modunda internet sansürünü ve hız kısıtlamalarını (YouTube ve Discord dahil) doğrudan atlar.
 
-> **Not:** Bu eklenti tamamen bağımsızdır. Amnezia VPN, warp-cli veya herhangi bir masaüstü GUI yöneticisinin yüklenmesini gerektirmez. Tüm ikili dosyalar eklentinin içinde paketlenmiştir.
-
 ![Ekran Görüntüsü](assets/screenshot.png)
 
 ## 📋 Özellikler

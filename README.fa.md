@@ -2,9 +2,7 @@
 
 [🇬🇧 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇷 فارسی](README.fa.md) | [🇹🇷 Türkçe](README.tr.md)
 
-یک پلاگین مستقل Decky Loader برای Steam Deck که ترکیبی از دور زدن DPI از طریق **Zapret** (nfqws) و تونل VPN امن از طریق **Cloudflare WARP (پروتکل MASQUE)** را ارائه می‌دهد — برای دور زدن سانسور اینترنت و کُندسازی (از جمله YouTube و Discord) مستقیماً در حالت بازی، بدون هیچ برنامه خارجی.
-
-> **توجه:** این پلاگین کاملاً مستقل است. نیازی به نصب Amnezia VPN، warp-cli یا هر مدیر رابط گرافیکی ندارد. تمام فایل‌های اجرایی درون پلاگین تعبیه شده‌اند.
+یک پلاگین مستقل Decky Loader для Steam Deck که ترکیبی از دور زدن DPI از طریق **Zapret** (nfqws) و تونل VPN امن از طریق **Cloudflare WARP (پروتکل MASQUE)** را ارائه می‌دهد — برای دور زدن سانسور اینترنت و کُندسازی (از جمله YouTube و Discord) مستقیماً در حالت بازی، بدون هیچ برنامه خارجی.
 
 ![اسکرین‌شات](assets/screenshot.png)
 

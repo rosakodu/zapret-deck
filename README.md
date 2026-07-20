@@ -4,14 +4,12 @@
 
 A standalone Decky Loader plugin for Steam Deck that combines DPI bypass via **Zapret** (nfqws) and a secure VPN tunnel via **Cloudflare WARP (MASQUE protocol)** — bypassing internet censorship and throttling (including YouTube and Discord) natively in gaming mode, without any external applications.
 
-> **Note:** This plugin is 100% standalone. It does not require Amnezia VPN, warp-cli, or any desktop GUI manager to be installed on your Steam Deck. All binaries are bundled inside.
-
 ![Screenshot](assets/screenshot.png)
 
 ## 📋 Features
 
 - **Two Bypass Modes**: Switch between **Zapret (DPI Bypass)** for direct unthrottled access (best for YouTube 4K / Discord) and **WARP VPN (MASQUE)** for full tunnel VPN.
-- **MASQUE Protocol**: WARP connects via MASQUE (HTTP/3 over QUIC), which is indistinguishable from regular HTTPS traffic. Bypasses WireGuard blocks used by ISPs in Russia without AmneziaWG.
+- **MASQUE Protocol**: WARP connects via MASQUE (HTTP/3 over QUIC), which is indistinguishable from regular HTTPS traffic.
 - **Auto-detect Strategy**: Zapret features built-in automatic strategy detection — it tests and selects the best DPI bypass parameters for your ISP.
 - **Blocked Domain Manager**: Add and manage domains to bypass, directly from the plugin UI.
 - **100% Standalone**: Runs in userspace. No kernel module compilation, no disabling SteamOS read-only filesystem, no dkms.

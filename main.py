@@ -57,7 +57,7 @@ def _rpc(func):
 
 class Plugin:
     def __init__(self):
-        self.settings = {"mode": "off", "current_strategy": DEFAULT_STRATEGIES[0]["args"]}
+        self.settings = {"zapret_enabled": False, "warp_enabled": False, "current_strategy": DEFAULT_STRATEGIES[0]["args"]}
         self.autotune_in_progress = False
         
         os.makedirs(SETTINGS_DIR, exist_ok=True)
@@ -92,18 +92,21 @@ class Plugin:
             decky.logger.error(f"Emergency cleanup on start failed: {e}")
             
         # Восстановление режима при запуске
-        mode = self.settings.get("mode", "off")
-        if mode == "zapret":
+        zapret_enabled = self.settings.get("zapret_enabled", False)
+        warp_enabled = self.settings.get("warp_enabled", False)
+        
+        if zapret_enabled:
             try:
                 strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
                 self.zapret_manager.start(strategy)
             except Exception as e:
-                decky.logger.error(f"Failed to restore zapret mode: {e}")
-        elif mode == "warp":
+                decky.logger.error(f"Failed to restore zapret: {e}")
+                
+        if warp_enabled:
             try:
                 self.warp_manager.start()
             except Exception as e:
-                decky.logger.error(f"Failed to restore warp mode: {e}")
+                decky.logger.error(f"Failed to restore warp: {e}")
 
     async def _unload(self):
         decky.logger.info("Zapret-Deck plugin unloading")
@@ -127,7 +130,8 @@ class Plugin:
     async def get_status(self) -> dict:
         """Возвращает статус плагина"""
         return {
-            "mode": self.settings.get("mode", "off"),
+            "zapret_enabled": self.settings.get("zapret_enabled", False),
+            "warp_enabled": self.settings.get("warp_enabled", False),
             "zapret_active": self.zapret_manager.is_running(),
             "warp_active": self.warp_manager.is_running(),
             "warp_registered": self.warp_manager.is_registered(),
@@ -144,30 +148,32 @@ class Plugin:
             return "english"
 
     @_rpc
-    async def set_mode(self, mode: str) -> dict:
-        """Переключает режим работы плагина"""
-        if mode not in ["off", "zapret", "warp"]:
-            return {"success": False, "error": f"Invalid mode: {mode}"}
+    async def set_service_state(self, service: str, enabled: bool) -> dict:
+        """Включает или выключает указанный сервис (zapret или warp)"""
+        if service not in ["zapret", "warp"]:
+            return {"success": False, "error": f"Invalid service: {service}"}
             
-        logger.info(f"Setting mode to: {mode}")
-        self.settings["mode"] = mode
+        logger.info(f"Setting service {service} enabled to: {enabled}")
+        self.settings[f"{service}_enabled"] = enabled
         self.save_settings()
 
-        # Сначала всё тушим
-        self.zapret_manager.stop()
-        self.warp_manager.stop()
+        if service == "zapret":
+            if enabled:
+                strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
+                self.zapret_manager.start(strategy)
+            else:
+                self.zapret_manager.stop()
+        elif service == "warp":
+            if enabled:
+                success = self.warp_manager.start()
+                if not success:
+                    self.settings["warp_enabled"] = False
+                    self.save_settings()
+                    return {"success": False, "error": "Failed to start WARP connection"}
+            else:
+                self.warp_manager.stop()
 
-        if mode == "zapret":
-            strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
-            self.zapret_manager.start(strategy)
-        elif mode == "warp":
-            success = self.warp_manager.start()
-            if not success:
-                self.settings["mode"] = "off"
-                self.save_settings()
-                return {"success": False, "error": "Failed to start WARP connection"}
-
-        return {"success": True, "mode": mode}
+        return {"success": True, "service": service, "enabled": enabled}
 
     @_rpc
     async def get_strategies(self) -> list:
@@ -181,7 +187,7 @@ class Plugin:
         self.save_settings()
         
         # Если сейчас включен zapret, перезапускаем его с новой стратегией
-        if self.settings.get("mode") == "zapret":
+        if self.settings.get("zapret_enabled", False):
             self.zapret_manager.start(strategy_args)
             
         return {"success": True, "strategy": strategy_args}
@@ -267,7 +273,7 @@ class Plugin:
 
         if worked_strategy:
             self.settings["current_strategy"] = worked_strategy
-            self.settings["mode"] = "zapret"
+            self.settings["zapret_enabled"] = True
             self.save_settings()
             # Запускаем окончательно
             self.zapret_manager.start(worked_strategy)

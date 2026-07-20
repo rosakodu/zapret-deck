@@ -11,6 +11,7 @@ import {
   staticClasses,
   TextField,
   DropdownItem,
+  ToggleField,
 } from "@decky/ui";
 import {
   callable,
@@ -21,7 +22,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { FaShieldAlt } from "react-icons/fa";
 
 interface StatusInfo {
-  mode: string;
+  zapret_enabled: boolean;
+  warp_enabled: boolean;
   zapret_active: boolean;
   warp_active: boolean;
   warp_registered: boolean;
@@ -35,7 +37,7 @@ interface StrategyInfo {
 }
 
 const getStatus = callable<[], StatusInfo>("get_status");
-const setMode = callable<[string], { success: boolean; mode?: string; error?: string }>("set_mode");
+const setServiceState = callable<[string, boolean], { success: boolean; service?: string; enabled?: boolean; error?: string }>("set_service_state");
 const getStrategies = callable<[], StrategyInfo[]>("get_strategies");
 const applyStrategy = callable<[string], { success: boolean; strategy?: string }>("apply_strategy");
 const generateWarp = callable<[], { success: boolean }>("generate_warp");
@@ -46,10 +48,8 @@ const getSteamLanguage = callable<[], string>("get_steam_language");
 
 type TranslationKeys =
   | "pluginTitle"
-  | "modeTitle"
-  | "modeOff"
-  | "modeZapret"
-  | "modeWarp"
+  | "zapretTitle"
+  | "warpTitle"
   | "statusTitle"
   | "statusActive"
   | "statusInactive"
@@ -76,12 +76,10 @@ type TranslationKeys =
 
 const translations: Record<string, Record<TranslationKeys, string>> = {
   english: {
-    pluginTitle: "Zapret & WARP Bypass",
-    modeTitle: "Operation Mode",
-    modeOff: "Disabled",
-    modeZapret: "Zapret (DPI Bypass)",
-    modeWarp: "WARP (MASQUE VPN)",
-    statusTitle: "Service Status",
+    pluginTitle: "Zapret Deck",
+    zapretTitle: "Zapret Bypass",
+    warpTitle: "WARP MASQUE VPN",
+    statusTitle: "Status",
     statusActive: "Active",
     statusInactive: "Inactive",
     zapretSettings: "Zapret Settings",
@@ -106,14 +104,12 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "Applied strategy",
   },
   russian: {
-    pluginTitle: "Обход Блокировок Zapret & WARP",
-    modeTitle: "Режим работы",
-    modeOff: "Выключен",
-    modeZapret: "Zapret (Обход DPI)",
-    modeWarp: "WARP (MASQUE VPN)",
-    statusTitle: "Состояние службы",
-    statusActive: "Активна",
-    statusInactive: "Неактивна",
+    pluginTitle: "Zapret Deck",
+    zapretTitle: "Обход Zapret",
+    warpTitle: "WARP MASQUE VPN",
+    statusTitle: "Состояние",
+    statusActive: "Активен",
+    statusInactive: "Неактивен",
     zapretSettings: "Настройки Zapret",
     warpSettings: "Настройки WARP",
     strategySelect: "Стратегия обхода",
@@ -136,14 +132,12 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "Применена стратегия",
   },
   ukrainian: {
-    pluginTitle: "Обхід Блокувань Zapret & WARP",
-    modeTitle: "Режим роботи",
-    modeOff: "Вимкнено",
-    modeZapret: "Zapret (Обхід DPI)",
-    modeWarp: "WARP (MASQUE VPN)",
-    statusTitle: "Стан служби",
-    statusActive: "Активна",
-    statusInactive: "Неактивна",
+    pluginTitle: "Zapret Deck",
+    zapretTitle: "Обхід Zapret",
+    warpTitle: "WARP MASQUE VPN",
+    statusTitle: "Стан",
+    statusActive: "Активний",
+    statusInactive: "Неактивний",
     zapretSettings: "Налаштування Zapret",
     warpSettings: "Налаштування WARP",
     strategySelect: "Стратегія обходу",
@@ -166,12 +160,10 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "Застосовано стратегію",
   },
   turkish: {
-    pluginTitle: "Zapret & WARP Engelleme Kaldırıcı",
-    modeTitle: "Çalışma Modu",
-    modeOff: "Devre Dışı",
-    modeZapret: "Zapret (DPI Atlatma)",
-    modeWarp: "WARP (MASQUE VPN)",
-    statusTitle: "Servis Durumu",
+    pluginTitle: "Zapret Deck",
+    zapretTitle: "Zapret Atlatma",
+    warpTitle: "WARP MASQUE VPN",
+    statusTitle: "Durum",
     statusActive: "Aktif",
     statusInactive: "Pasif",
     zapretSettings: "Zapret Ayarları",
@@ -266,18 +258,18 @@ const Content = () => {
     return () => clearInterval(interval);
   }, [refreshStatus]);
 
-  const handleModeChange = async (mode: string) => {
+  const handleServiceToggle = async (service: string, enabled: boolean) => {
     try {
-      const res = await setMode(mode);
+      const res = await setServiceState(service, enabled);
       if (res.success) {
         toaster.toast({
           title: t.pluginTitle,
-          body: `${t.modeTitle}: ${mode === "off" ? t.modeOff : mode === "zapret" ? t.modeZapret : t.modeWarp}`,
+          body: `${service === "zapret" ? t.zapretTitle : t.warpTitle}: ${enabled ? t.statusActive : t.statusInactive}`,
         });
       } else {
         toaster.toast({
           title: t.error,
-          body: res.error || "Failed to switch mode",
+          body: res.error || "Failed to toggle service",
         });
       }
       refreshStatus();
@@ -368,40 +360,23 @@ const Content = () => {
     return <PanelSection><PanelSectionRow>Loading...</PanelSectionRow></PanelSection>;
   }
 
-  const modeOptions = [
-    { data: "off", label: t.modeOff },
-    { data: "zapret", label: t.modeZapret },
-    { data: "warp", label: t.modeWarp },
-  ];
-
   const strategyOptions = strategies.map((s) => ({
     data: s.args,
     label: s.name,
   }));
 
-  const isServiceActive = status.mode === "zapret" ? status.zapret_active : status.mode === "warp" ? status.warp_active : false;
-
   return (
     <PanelSection title={t.pluginTitle}>
+      {/* Zapret Bypass Section */}
       <PanelSectionRow>
-        <DropdownItem
-          label={t.modeTitle}
-          rgOptions={modeOptions}
-          selectedOption={status.mode}
-          onChange={(opt) => handleModeChange(opt.data)}
+        <ToggleField
+          label={t.zapretTitle}
+          checked={status.zapret_enabled}
+          onChange={(val) => handleServiceToggle("zapret", val)}
         />
       </PanelSectionRow>
 
-      <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>{t.statusTitle}</span>
-          <span style={{ color: isServiceActive ? "#4caf50" : "#f44336", fontWeight: "bold" }}>
-            {isServiceActive ? t.statusActive : t.statusInactive}
-          </span>
-        </div>
-      </PanelSectionRow>
-
-      {status.mode === "zapret" && (
+      {status.zapret_enabled && (
         <PanelSection title={t.zapretSettings}>
           <PanelSectionRow>
             <DropdownItem
@@ -430,7 +405,16 @@ const Content = () => {
         </PanelSection>
       )}
 
-      {status.mode === "warp" && (
+      {/* WARP VPN Section */}
+      <PanelSectionRow>
+        <ToggleField
+          label={t.warpTitle}
+          checked={status.warp_enabled}
+          onChange={(val) => handleServiceToggle("warp", val)}
+        />
+      </PanelSectionRow>
+
+      {status.warp_enabled && (
         <PanelSection title={t.warpSettings}>
           <PanelSectionRow>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -458,8 +442,8 @@ const Content = () => {
 
 export default definePlugin(() => {
   return {
-    name: "Zapret & WARP",
-    titleView: <div className={staticClasses.Title}>Zapret & WARP</div>,
+    name: "Zapret Deck",
+    titleView: <div className={staticClasses.Title}>Zapret Deck</div>,
     content: <Content />,
     icon: <FaShieldAlt />,
     onDismount() {
