@@ -376,34 +376,32 @@ const Content = () => {
         />
       </PanelSectionRow>
 
-      {status.zapret_enabled && (
-        <PanelSection title={t.zapretSettings}>
-          <PanelSectionRow>
-            <DropdownItem
-              label={t.strategySelect}
-              rgOptions={strategyOptions}
-              selectedOption={status.current_strategy}
-              onChange={(opt) => handleStrategyChange(opt.data)}
-            />
-          </PanelSectionRow>
-          
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={handleStartAutotune}
-              disabled={status.autotune_in_progress}
-            >
-              {status.autotune_in_progress ? t.autotuneRunning : t.runAutotune}
-            </ButtonItem>
-          </PanelSectionRow>
+      <PanelSection title={t.zapretSettings}>
+        <PanelSectionRow>
+          <DropdownItem
+            label={t.strategySelect}
+            rgOptions={strategyOptions}
+            selectedOption={status.current_strategy}
+            onChange={(opt) => handleStrategyChange(opt.data)}
+          />
+        </PanelSectionRow>
+        
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={handleStartAutotune}
+            disabled={status.autotune_in_progress}
+          >
+            {status.autotune_in_progress ? t.autotuneRunning : t.runAutotune}
+          </ButtonItem>
+        </PanelSectionRow>
 
-          <PanelSectionRow>
-            <ButtonItem layout="below" onClick={handleEditHostlist}>
-              {t.editHostlist}
-            </ButtonItem>
-          </PanelSectionRow>
-        </PanelSection>
-      )}
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={handleEditHostlist}>
+            {t.editHostlist}
+          </ButtonItem>
+        </PanelSectionRow>
+      </PanelSection>
 
       {/* WARP VPN Section */}
       <PanelSectionRow>
@@ -414,28 +412,26 @@ const Content = () => {
         />
       </PanelSectionRow>
 
-      {status.warp_enabled && (
-        <PanelSection title={t.warpSettings}>
-          <PanelSectionRow>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>{t.warpStatus}</span>
-              <span style={{ color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }}>
-                {status.warp_registered ? t.warpRegistered : t.warpNotRegistered}
-              </span>
-            </div>
-          </PanelSectionRow>
+      <PanelSection title={t.warpSettings}>
+        <PanelSectionRow>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>{t.warpStatus}</span>
+            <span style={{ color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }}>
+              {status.warp_registered ? t.warpRegistered : t.warpNotRegistered}
+            </span>
+          </div>
+        </PanelSectionRow>
 
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={handleGenerateWarp}
-              disabled={loadingWarp}
-            >
-              {loadingWarp ? t.generatingWarp : t.generateWarp}
-            </ButtonItem>
-          </PanelSectionRow>
-        </PanelSection>
-      )}
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={handleGenerateWarp}
+            disabled={loadingWarp}
+          >
+            {loadingWarp ? t.generatingWarp : t.generateWarp}
+          </ButtonItem>
+        </PanelSectionRow>
+      </PanelSection>
     </PanelSection>
   );
 };
