@@ -7,19 +7,17 @@ import subprocess
 import functools
 import traceback as _traceback
 
-# Настройка путей для импорта
-plugin_dir = os.path.dirname(os.path.abspath(__file__))
-if plugin_dir not in sys.path:
-    sys.path.insert(0, plugin_dir)
-
 import decky
 
 # Инициализация логгера
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("zapret-deck")
 
-from zapret_manager import ZapretManager
-from warp_manager import WarpManager
+from zapret_deck.zapret_manager import ZapretManager
+from zapret_deck.warp_manager import WarpManager
+
+# Путь к директории плагина
+plugin_dir = os.path.dirname(os.path.abspath(__file__))
 
 SETTINGS_DIR = os.path.join(os.path.expanduser("~"), ".config", "zapret-deck")
 SETTINGS_FILE = os.path.join(SETTINGS_DIR, "settings.json")
