@@ -1,5 +1,6 @@
 {
   "name": "zapret-deck",
+  "version": "1.0.0",
   "author": "rosakodu",
   "flags": [
     "root"
