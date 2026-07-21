@@ -92,6 +92,7 @@ const getHostlist = callable("get_hostlist");
 const saveHostlist = callable("save_hostlist");
 const startAutotune = callable("start_autotune");
 const getSteamLanguage = callable("get_steam_language");
+const updateResources = callable("update_resources");
 const translations = {
     english: {
         pluginTitle: "Zapret Deck",
@@ -120,6 +121,8 @@ const translations = {
         noWorkingStrategy: "No working strategy found",
         autotuneComplete: "Auto-detection complete!",
         appliedStrategy: "Applied strategy",
+        updateResources: "Update Lists & Strategies",
+        updating: "Updating...",
     },
     russian: {
         pluginTitle: "Zapret Deck",
@@ -148,6 +151,8 @@ const translations = {
         noWorkingStrategy: "Рабочая стратегия не найдена",
         autotuneComplete: "Автоподбор завершен!",
         appliedStrategy: "Применена стратегия",
+        updateResources: "Обновить списки и стратегии",
+        updating: "Обновление...",
     },
     ukrainian: {
         pluginTitle: "Zapret Deck",
@@ -176,6 +181,8 @@ const translations = {
         noWorkingStrategy: "Робочу стратегію не знайдено",
         autotuneComplete: "Автопідбір завершено!",
         appliedStrategy: "Застосовано стратегію",
+        updateResources: "Оновити списки та стратегії",
+        updating: "Оновлення...",
     },
     turkish: {
         pluginTitle: "Zapret Deck",
@@ -204,6 +211,8 @@ const translations = {
         noWorkingStrategy: "Çalışan strateji bulunamadı",
         autotuneComplete: "Otomatik algılama tamamlandı!",
         appliedStrategy: "Uygulanan strateji",
+        updateResources: "Listeleri ve Stratejileri Güncelle",
+        updating: "Güncelleniyor...",
     },
     arabic: {
         pluginTitle: "Zapret Deck",
@@ -232,6 +241,8 @@ const translations = {
         noWorkingStrategy: "لم يتم العثور على استراتيجية صالحة",
         autotuneComplete: "اكتمل الكشف التلقائي!",
         appliedStrategy: "تم تطبيق الاستراتيجية",
+        updateResources: "تحديث القوائم والاستراتيجيات",
+        updating: "جاري التحديث...",
     },
     farsi: {
         pluginTitle: "Zapret Deck",
@@ -260,6 +271,8 @@ const translations = {
         noWorkingStrategy: "استراتژی کارآمدی یافت نشد",
         autotuneComplete: "تشخیص خودکار به پایان رسید!",
         appliedStrategy: "استراتژی اعمال شد",
+        updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
+        updating: "در حال بروزرسانی...",
     },
     persian: {
         pluginTitle: "Zapret Deck",
@@ -288,6 +301,8 @@ const translations = {
         noWorkingStrategy: "استراتژی کارآمدی یافت نشد",
         autotuneComplete: "تشخیص خودکار به پایان رسید!",
         appliedStrategy: "استراتژی اعمال شد",
+        updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
+        updating: "در حال بروزرسانی...",
     },
     schinese: {
         pluginTitle: "Zapret Deck",
@@ -316,6 +331,8 @@ const translations = {
         noWorkingStrategy: "未找到可用策略",
         autotuneComplete: "自动检测完成！",
         appliedStrategy: "已应用策略",
+        updateResources: "更新域名列表与策略",
+        updating: "更新中...",
     },
     tchinese: {
         pluginTitle: "Zapret Deck",
@@ -344,6 +361,8 @@ const translations = {
         noWorkingStrategy: "未找到可用策略",
         autotuneComplete: "自動檢測完成！",
         appliedStrategy: "已應用策略",
+        updateResources: "更新網網域名稱列表與策略",
+        updating: "更新中...",
     }
 };
 const HostlistModal = ({ closeModal, onSave, currentHosts, t, }) => {
@@ -359,6 +378,7 @@ const Content = () => {
     const [lang, setLang] = SP_REACT.useState("english");
     const [hostlist, setHostlist] = SP_REACT.useState("");
     const [loadingWarp, setLoadingWarp] = SP_REACT.useState(false);
+    const [updatingResources, setUpdatingResources] = SP_REACT.useState(false);
     const t = SP_REACT.useMemo(() => {
         return translations[lang] || translations.english;
     }, [lang]);
@@ -440,6 +460,30 @@ const Content = () => {
             setLoadingWarp(false);
         }
     };
+    const handleUpdateResources = async () => {
+        setUpdatingResources(true);
+        try {
+            const res = await updateResources();
+            if (res.success) {
+                toaster.toast({
+                    title: t.pluginTitle,
+                    body: `${t.updateResources}: ${t.success}`,
+                });
+            }
+            else {
+                toaster.toast({
+                    title: t.error,
+                    body: "Failed to update resources",
+                });
+            }
+        }
+        catch (e) {
+            console.error(e);
+        }
+        finally {
+            setUpdatingResources(false);
+        }
+    };
     const handleStartAutotune = async () => {
         try {
             const res = await startAutotune();
@@ -480,7 +524,27 @@ const Content = () => {
         data: s.args,
         label: s.name,
     }));
-    return (SP_JSX.jsxs(DFL.PanelSection, { title: t.pluginTitle, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: t.zapretTitle, checked: status.zapret_enabled, onChange: (val) => handleServiceToggle("zapret", val) }) }), SP_JSX.jsxs(DFL.PanelSection, { title: t.zapretSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.strategySelect, rgOptions: strategyOptions, selectedOption: status.current_strategy, onChange: (opt) => handleStrategyChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleEditHostlist, children: t.editHostlist }) })] }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: t.warpTitle, checked: status.warp_enabled, onChange: (val) => handleServiceToggle("warp", val) }) }), SP_JSX.jsxs(DFL.PanelSection, { title: t.warpSettings, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] })] }));
+    return (SP_JSX.jsxs(DFL.PanelSection, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ToggleField, { label: t.zapretTitle, checked: status.zapret_enabled, onChange: (val) => handleServiceToggle("zapret", val) }), status.zapret_active && (SP_JSX.jsx("div", { style: {
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                border: "1.5px solid #1a9fff",
+                                borderRadius: "4px",
+                                pointerEvents: "none",
+                                backgroundColor: "rgba(26, 159, 255, 0.1)"
+                            } }))] }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.zapretSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.strategySelect, rgOptions: strategyOptions, selectedOption: status.current_strategy, onChange: (opt) => handleStrategyChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleEditHostlist, children: t.editHostlist }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleUpdateResources, disabled: updatingResources, children: updatingResources ? t.updating : t.updateResources }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ToggleField, { label: t.warpTitle, checked: status.warp_enabled, onChange: (val) => handleServiceToggle("warp", val) }), status.warp_active && (SP_JSX.jsx("div", { style: {
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                border: "1.5px solid #1a9fff",
+                                borderRadius: "4px",
+                                pointerEvents: "none",
+                                backgroundColor: "rgba(26, 159, 255, 0.1)"
+                            } }))] }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "4px 8px" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }));
 };
 var index = definePlugin(() => {
     return {

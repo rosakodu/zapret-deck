@@ -15,7 +15,7 @@ logger = logging.getLogger("zapret-deck")
 
 from zapret_deck.zapret_manager import ZapretManager
 from zapret_deck.warp_manager import WarpManager
-from strategies import DEFAULT_STRATEGIES
+from zapret_deck.strategies import DEFAULT_STRATEGIES
 
 # Путь к директории плагина
 plugin_dir = os.path.dirname(os.path.abspath(__file__))
@@ -73,27 +73,17 @@ class Plugin:
         except Exception as e:
             decky.logger.error(f"Emergency cleanup on start failed: {e}")
             
-        # Восстановление режима при запуске
-        zapret_enabled = self.settings.get("zapret_enabled", False)
-        warp_enabled = self.settings.get("warp_enabled", False)
-        
-        if zapret_enabled:
-            try:
-                strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
-                self.zapret_manager.start(strategy, HOSTLIST_FILE)
-            except Exception as e:
-                decky.logger.error(f"Failed to restore zapret: {e}")
-                
-        if warp_enabled:
-            try:
-                self.warp_manager.start()
-            except Exception as e:
-                decky.logger.error(f"Failed to restore warp: {e}")
+        # Сетевая очистка при старте
+        pass
 
     async def _unload(self):
         decky.logger.info("Zapret-Deck plugin unloading")
         self.zapret_manager.stop()
         self.warp_manager.stop()
+        # Сбрасываем флаги активности при выходе, чтобы они не запускались сами
+        self.settings["zapret_enabled"] = False
+        self.settings["warp_enabled"] = False
+        self.save_settings()
 
     async def _uninstall(self):
         decky.logger.info("Zapret-Deck plugin uninstalling")
@@ -266,3 +256,54 @@ class Plugin:
             logger.info("Autotune complete. Applied working strategy.")
         else:
             logger.info("Autotune failed. No working strategy found.")
+
+    @_rpc
+    async def update_resources(self) -> dict:
+        """Скачивает обновленные листы доменов с GitHub"""
+        logger.info("Updating resources from GitHub...")
+        
+        lists_to_update = [
+            "list-general.txt",
+            "list-google.txt",
+            "list-exclude.txt",
+            "ipset-all.txt",
+            "ipset-exclude.txt"
+        ]
+        
+        lists_dir = os.path.join(plugin_dir, "lists")
+        os.makedirs(lists_dir, exist_ok=True)
+        
+        updated_count = 0
+        import urllib.request
+        
+        # Создаем SSL-контекст без проверки сертификатов для обхода проблем с CA-bundle на Steam Deck
+        ssl_context = None
+        try:
+            import ssl
+            ssl_context = ssl._create_unverified_context()
+        except Exception:
+            pass
+            
+        for lst in lists_to_update:
+            url = f"https://raw.githubusercontent.com/Sergeydigl3/zapret-discord-youtube-linux/master/lists/{lst}"
+            try:
+                loop = asyncio.get_event_loop()
+                def _download():
+                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                    with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
+                        return response.read()
+                
+                content = await loop.run_in_executor(None, _download)
+                with open(os.path.join(lists_dir, lst), "wb") as f:
+                    f.write(content)
+                logger.info(f"Successfully updated list: {lst}")
+                updated_count += 1
+            except Exception as e:
+                logger.error(f"Failed to update list {lst}: {e}")
+                
+        # Если сейчас включен zapret, перезапускаем его
+        if self.settings.get("zapret_enabled", False):
+            strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
+            self.zapret_manager.start(strategy, HOSTLIST_FILE)
+            
+        return {"success": True, "updated_lists": updated_count}

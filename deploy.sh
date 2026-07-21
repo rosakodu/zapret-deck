@@ -21,7 +21,7 @@ rm -rf "$TEMP_DEPLOY_DIR"
 mkdir -p "$TEMP_DEPLOY_DIR"
 
 # Копируем только необходимые для работы файлы
-cp -r dist bin py_modules main.py strategies.py lists plugin.json package.json "$TEMP_DEPLOY_DIR/"
+cp -r dist bin py_modules main.py lists plugin.json package.json "$TEMP_DEPLOY_DIR/"
 
 echo "==> 3. Очистка старой версии на Steam Deck..."
 sshpass -p "$DECK_PASS" ssh -o StrictHostKeyChecking=no "${DECK_USER}@${DECK_IP}" "echo '$DECK_PASS' | sudo -S rm -rf '${DEST_DIR}' && echo '$DECK_PASS' | sudo -S mkdir -p '${DEST_DIR}' && echo '$DECK_PASS' | sudo -S chown -R deck:deck '${DEST_DIR}'"

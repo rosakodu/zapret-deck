@@ -45,6 +45,7 @@ const getHostlist = callable<[], string>("get_hostlist");
 const saveHostlist = callable<[string], { success: boolean; error?: string }>("save_hostlist");
 const startAutotune = callable<[], { success: boolean; error?: string }>("start_autotune");
 const getSteamLanguage = callable<[], string>("get_steam_language");
+const updateResources = callable<[], { success: boolean; updated_lists: number }>("update_resources");
 
 type TranslationKeys =
   | "pluginTitle"
@@ -72,7 +73,9 @@ type TranslationKeys =
   | "error"
   | "noWorkingStrategy"
   | "autotuneComplete"
-  | "appliedStrategy";
+  | "appliedStrategy"
+  | "updateResources"
+  | "updating";
 
 const translations: Record<string, Record<TranslationKeys, string>> = {
   english: {
@@ -102,6 +105,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "No working strategy found",
     autotuneComplete: "Auto-detection complete!",
     appliedStrategy: "Applied strategy",
+    updateResources: "Update Lists & Strategies",
+    updating: "Updating...",
   },
   russian: {
     pluginTitle: "Zapret Deck",
@@ -130,6 +135,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "Рабочая стратегия не найдена",
     autotuneComplete: "Автоподбор завершен!",
     appliedStrategy: "Применена стратегия",
+    updateResources: "Обновить списки и стратегии",
+    updating: "Обновление...",
   },
   ukrainian: {
     pluginTitle: "Zapret Deck",
@@ -158,6 +165,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "Робочу стратегію не знайдено",
     autotuneComplete: "Автопідбір завершено!",
     appliedStrategy: "Застосовано стратегію",
+    updateResources: "Оновити списки та стратегії",
+    updating: "Оновлення...",
   },
   turkish: {
     pluginTitle: "Zapret Deck",
@@ -186,6 +195,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "Çalışan strateji bulunamadı",
     autotuneComplete: "Otomatik algılama tamamlandı!",
     appliedStrategy: "Uygulanan strateji",
+    updateResources: "Listeleri ve Stratejileri Güncelle",
+    updating: "Güncelleniyor...",
   },
   arabic: {
     pluginTitle: "Zapret Deck",
@@ -214,6 +225,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "لم يتم العثور على استراتيجية صالحة",
     autotuneComplete: "اكتمل الكشف التلقائي!",
     appliedStrategy: "تم تطبيق الاستراتيجية",
+    updateResources: "تحديث القوائم والاستراتيجيات",
+    updating: "جاري التحديث...",
   },
   farsi: {
     pluginTitle: "Zapret Deck",
@@ -242,6 +255,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "استراتژی کارآمدی یافت نشد",
     autotuneComplete: "تشخیص خودکار به پایان رسید!",
     appliedStrategy: "استراتژی اعمال شد",
+    updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
+    updating: "در حال بروزرسانی...",
   },
   persian: {
     pluginTitle: "Zapret Deck",
@@ -270,6 +285,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "استراتژی کارآمدی یافت نشد",
     autotuneComplete: "تشخیص خودکار به پایان رسید!",
     appliedStrategy: "استراتژی اعمال شد",
+    updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
+    updating: "در حال بروزرسانی...",
   },
   schinese: {
     pluginTitle: "Zapret Deck",
@@ -298,6 +315,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "未找到可用策略",
     autotuneComplete: "自动检测完成！",
     appliedStrategy: "已应用策略",
+    updateResources: "更新域名列表与策略",
+    updating: "更新中...",
   },
   tchinese: {
     pluginTitle: "Zapret Deck",
@@ -326,6 +345,8 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     noWorkingStrategy: "未找到可用策略",
     autotuneComplete: "自動檢測完成！",
     appliedStrategy: "已應用策略",
+    updateResources: "更新網網域名稱列表與策略",
+    updating: "更新中...",
   }
 };
 
@@ -373,6 +394,7 @@ const Content = () => {
   const [lang, setLang] = useState<string>("english");
   const [hostlist, setHostlist] = useState<string>("");
   const [loadingWarp, setLoadingWarp] = useState<boolean>(false);
+  const [updatingResources, setUpdatingResources] = useState<boolean>(false);
 
   const t = useMemo(() => {
     return translations[lang] || translations.english;
@@ -456,6 +478,28 @@ const Content = () => {
     }
   };
 
+  const handleUpdateResources = async () => {
+    setUpdatingResources(true);
+    try {
+      const res = await updateResources();
+      if (res.success) {
+        toaster.toast({
+          title: t.pluginTitle,
+          body: `${t.updateResources}: ${t.success}`,
+        });
+      } else {
+        toaster.toast({
+          title: t.error,
+          body: "Failed to update resources",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUpdatingResources(false);
+    }
+  };
+
   const handleStartAutotune = async () => {
     try {
       const res = await startAutotune();
@@ -506,72 +550,120 @@ const Content = () => {
   }));
 
   return (
-    <PanelSection title={t.pluginTitle}>
+    <PanelSection>
       {/* Zapret Bypass Section */}
       <PanelSectionRow>
-        <ToggleField
-          label={t.zapretTitle}
-          checked={status.zapret_enabled}
-          onChange={(val) => handleServiceToggle("zapret", val)}
-        />
+        <div style={{ position: "relative", width: "100%" }}>
+          <ToggleField
+            label={t.zapretTitle}
+            checked={status.zapret_enabled}
+            onChange={(val) => handleServiceToggle("zapret", val)}
+          />
+          {status.zapret_active && (
+            <div style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              border: "1.5px solid #1a9fff",
+              borderRadius: "4px",
+              pointerEvents: "none",
+              backgroundColor: "rgba(26, 159, 255, 0.1)"
+            }} />
+          )}
+        </div>
       </PanelSectionRow>
 
-      <PanelSection title={t.zapretSettings}>
-        <PanelSectionRow>
-          <DropdownItem
-            label={t.strategySelect}
-            rgOptions={strategyOptions}
-            selectedOption={status.current_strategy}
-            onChange={(opt) => handleStrategyChange(opt.data)}
-          />
-        </PanelSectionRow>
-        
-        <PanelSectionRow>
-          <ButtonItem
-            layout="below"
-            onClick={handleStartAutotune}
-            disabled={status.autotune_in_progress}
-          >
-            {status.autotune_in_progress ? t.autotuneRunning : t.runAutotune}
-          </ButtonItem>
-        </PanelSectionRow>
+      <div style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }}>
+        <span style={{ fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          {t.zapretSettings}
+        </span>
+      </div>
 
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={handleEditHostlist}>
-            {t.editHostlist}
-          </ButtonItem>
-        </PanelSectionRow>
-      </PanelSection>
+      <PanelSectionRow>
+        <DropdownItem
+          label={t.strategySelect}
+          rgOptions={strategyOptions}
+          selectedOption={status.current_strategy}
+          onChange={(opt) => handleStrategyChange(opt.data)}
+        />
+      </PanelSectionRow>
+      
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleStartAutotune}
+          disabled={status.autotune_in_progress}
+        >
+          {status.autotune_in_progress ? t.autotuneRunning : t.runAutotune}
+        </ButtonItem>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ButtonItem layout="below" onClick={handleEditHostlist}>
+          {t.editHostlist}
+        </ButtonItem>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleUpdateResources}
+          disabled={updatingResources}
+        >
+          {updatingResources ? t.updating : t.updateResources}
+        </ButtonItem>
+      </PanelSectionRow>
 
       {/* WARP VPN Section */}
       <PanelSectionRow>
-        <ToggleField
-          label={t.warpTitle}
-          checked={status.warp_enabled}
-          onChange={(val) => handleServiceToggle("warp", val)}
-        />
+        <div style={{ position: "relative", width: "100%" }}>
+          <ToggleField
+            label={t.warpTitle}
+            checked={status.warp_enabled}
+            onChange={(val) => handleServiceToggle("warp", val)}
+          />
+          {status.warp_active && (
+            <div style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              border: "1.5px solid #1a9fff",
+              borderRadius: "4px",
+              pointerEvents: "none",
+              backgroundColor: "rgba(26, 159, 255, 0.1)"
+            }} />
+          )}
+        </div>
       </PanelSectionRow>
 
-      <PanelSection title={t.warpSettings}>
-        <PanelSectionRow>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>{t.warpStatus}</span>
-            <span style={{ color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }}>
-              {status.warp_registered ? t.warpRegistered : t.warpNotRegistered}
-            </span>
-          </div>
-        </PanelSectionRow>
+      <div style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }}>
+        <span style={{ fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          {t.warpSettings}
+        </span>
+      </div>
 
-        <PanelSectionRow>
-          <ButtonItem
-            layout="below"
-            onClick={handleGenerateWarp}
-            disabled={loadingWarp}
-          >
-            {loadingWarp ? t.generatingWarp : t.generateWarp}
-          </ButtonItem>
-        </PanelSectionRow>
-      </PanelSection>
+      <PanelSectionRow>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "4px 8px" }}>
+          <span>{t.warpStatus}</span>
+          <span style={{ color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }}>
+            {status.warp_registered ? t.warpRegistered : t.warpNotRegistered}
+          </span>
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleGenerateWarp}
+          disabled={loadingWarp}
+        >
+          {loadingWarp ? t.generatingWarp : t.generateWarp}
+        </ButtonItem>
+      </PanelSectionRow>
     </PanelSection>
   );
 };
