@@ -24,7 +24,7 @@ mkdir -p "$TEMP_DEPLOY_DIR"
 cp -r dist bin py_modules main.py lists plugin.json package.json "$TEMP_DEPLOY_DIR/"
 
 echo "==> 3. Очистка старой версии на Steam Deck..."
-sshpass -p "$DECK_PASS" ssh -o StrictHostKeyChecking=no "${DECK_USER}@${DECK_IP}" "echo '$DECK_PASS' | sudo -S rm -rf '${DEST_DIR}' && echo '$DECK_PASS' | sudo -S mkdir -p '${DEST_DIR}' && echo '$DECK_PASS' | sudo -S chown -R deck:deck '${DEST_DIR}'"
+sshpass -p "$DECK_PASS" ssh -o StrictHostKeyChecking=no "${DECK_USER}@${DECK_IP}" "echo '$DECK_PASS' | sudo -S nft delete table inet zapretunix || true; echo '$DECK_PASS' | sudo -S pkill -9 nfqws || true; echo '$DECK_PASS' | sudo -S rm -rf '${DEST_DIR}' && echo '$DECK_PASS' | sudo -S mkdir -p '${DEST_DIR}' && echo '$DECK_PASS' | sudo -S chown -R deck:deck '${DEST_DIR}'"
 
 echo "==> 4. Копирование файлов на Steam Deck..."
 sshpass -p "$DECK_PASS" scp -o StrictHostKeyChecking=no -r "$TEMP_DEPLOY_DIR"/* "${DECK_USER}@${DECK_IP}:${DEST_DIR}/"

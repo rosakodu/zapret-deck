@@ -151,6 +151,9 @@ class ZapretManager:
                 tcp_ports = arg.split("=")[1]
             elif arg.startswith("--wf-udp="):
                 udp_ports = arg.split("=")[1]
+            elif arg == "--filter-tcp=" or arg == "--filter-udp=":
+                # Пропускаем пустые фильтры портов, которые ломают nfqws v72.5
+                continue
             else:
                 filtered_args.append(arg_replaced)
 
