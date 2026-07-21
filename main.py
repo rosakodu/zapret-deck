@@ -15,6 +15,7 @@ logger = logging.getLogger("zapret-deck")
 
 from zapret_deck.zapret_manager import ZapretManager
 from zapret_deck.warp_manager import WarpManager
+from strategies import DEFAULT_STRATEGIES
 
 # Путь к директории плагина
 plugin_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,25 +23,6 @@ plugin_dir = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_DIR = os.path.join(os.path.expanduser("~"), ".config", "zapret-deck")
 SETTINGS_FILE = os.path.join(SETTINGS_DIR, "settings.json")
 HOSTLIST_FILE = os.path.join(SETTINGS_DIR, "hostlist.txt")
-
-DEFAULT_STRATEGIES = [
-    {
-        "name": "YouTube/Discord (hostfakesplit)",
-        "args": "--filter-tcp=443 --dpi-desync=hostfakesplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-hostfakesplit-mod=host=www.google.com"
-    },
-    {
-        "name": "General Bypass (split2)",
-        "args": "--filter-tcp=443 --dpi-desync=split2 --dpi-desync-split-pos=1 --dpi-desync-fooling=md5sig"
-    },
-    {
-        "name": "Fake & TTL (fake/ttl)",
-        "args": "--filter-tcp=443 --dpi-desync=fake --dpi-desync-autottl=2 --dpi-desync-repeats=6"
-    },
-    {
-        "name": "Disorder (disorder)",
-        "args": "--filter-tcp=443 --dpi-desync=disorder --dpi-desync-split-pos=1"
-    }
-]
 
 def _rpc(func):
     @functools.wraps(func)
@@ -98,7 +80,7 @@ class Plugin:
         if zapret_enabled:
             try:
                 strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
-                self.zapret_manager.start(strategy)
+                self.zapret_manager.start(strategy, HOSTLIST_FILE)
             except Exception as e:
                 decky.logger.error(f"Failed to restore zapret: {e}")
                 
@@ -160,7 +142,7 @@ class Plugin:
         if service == "zapret":
             if enabled:
                 strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
-                self.zapret_manager.start(strategy)
+                self.zapret_manager.start(strategy, HOSTLIST_FILE)
             else:
                 self.zapret_manager.stop()
         elif service == "warp":
@@ -188,7 +170,7 @@ class Plugin:
         
         # Если сейчас включен zapret, перезапускаем его с новой стратегией
         if self.settings.get("zapret_enabled", False):
-            self.zapret_manager.start(strategy_args)
+            self.zapret_manager.start(strategy_args, HOSTLIST_FILE)
             
         return {"success": True, "strategy": strategy_args}
 
@@ -215,6 +197,10 @@ class Plugin:
         try:
             with open(HOSTLIST_FILE, "w") as f:
                 f.write(hosts)
+            # Перезапускаем zapret, чтобы применить новый список хостов
+            if self.settings.get("zapret_enabled", False):
+                strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
+                self.zapret_manager.start(strategy, HOSTLIST_FILE)
             return {"success": True}
         except Exception as e:
             logger.error(f"Failed to save hostlist: {e}")
@@ -250,7 +236,7 @@ class Plugin:
             logger.info(f"Autotune testing: {strat['name']}")
             try:
                 # Запускаем nfqws с этой стратегией
-                self.zapret_manager.start(strat["args"])
+                self.zapret_manager.start(strat["args"], HOSTLIST_FILE)
                 await asyncio.sleep(3) # даем примениться
                 
                 # Тестируем доступность Google/YouTube
@@ -276,7 +262,7 @@ class Plugin:
             self.settings["zapret_enabled"] = True
             self.save_settings()
             # Запускаем окончательно
-            self.zapret_manager.start(worked_strategy)
+            self.zapret_manager.start(worked_strategy, HOSTLIST_FILE)
             logger.info("Autotune complete. Applied working strategy.")
         else:
             logger.info("Autotune failed. No working strategy found.")

@@ -1,7 +1,8 @@
 import os
 import subprocess
 import logging
-import signal
+import re
+import shlex
 
 logger = logging.getLogger("zapret-deck.zapret")
 
@@ -59,10 +60,14 @@ class ZapretManager:
         self._run_cmd(["nft", "delete", "chain", "inet", TABLE_NAME, CHAIN_NAME])
         self._run_cmd(["nft", "delete", "table", "inet", TABLE_NAME])
 
-    def setup_nftables(self):
-        """Создает правила nftables для перенаправления HTTP/HTTPS/QUIC в nfqws"""
-        logger.info("Setting up nftables rules...")
+    def setup_nftables(self, tcp_ports: str = "80,443", udp_ports: str = "443"):
+        """Создает правила nftables для перенаправления TCP/UDP в nfqws"""
+        logger.info(f"Setting up nftables rules (TCP: {tcp_ports}, UDP: {udp_ports})...")
         self.clear_nftables()
+
+        # Форматируем порты для nftables (заменяем запятые на пробелы и запятые)
+        nft_tcp = tcp_ports.replace(",", ", ")
+        nft_udp = udp_ports.replace(",", ", ")
 
         # 1. Создаем inet таблицу zapretunix
         rc, _, err = self._run_cmd(["nft", "add", "table", "inet", TABLE_NAME])
@@ -77,45 +82,79 @@ class ZapretManager:
         if rc != 0:
             raise Exception(f"Failed to create nftables chain: {err}")
 
-        # 3. Добавляем правило перенаправления TCP портов 80, 443
+        # 3. Добавляем правило перенаправления TCP
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
-            "tcp", "dport", "{ 80, 443 }", "counter", "queue", "num", str(QUEUE_NUM), "bypass",
+            "tcp", "dport", f"{{ {nft_tcp} }}", "counter", "queue", "num", str(QUEUE_NUM), "bypass",
             "comment", f'"{RULE_COMMENT}"'
         ])
         if rc != 0:
             raise Exception(f"Failed to add TCP redirect rule: {err}")
 
-        # 4. Добавляем правило перенаправления UDP порта 443 (QUIC/HTTP3)
+        # 4. Добавляем правило перенаправления UDP
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
-            "udp", "dport", "{ 443 }", "counter", "queue", "num", str(QUEUE_NUM), "bypass",
+            "udp", "dport", f"{{ {nft_udp} }}", "counter", "queue", "num", str(QUEUE_NUM), "bypass",
             "comment", f'"{RULE_COMMENT}"'
         ])
         if rc != 0:
             raise Exception(f"Failed to add UDP redirect rule: {err}")
 
-    def start(self, strategy_args: str):
+    def start(self, strategy_args: str, user_hostlist_path: str = None):
         """Запускает nfqws с выбранной стратегией"""
         logger.info(f"Starting zapret (nfqws) with strategy args: {strategy_args}")
         self.stop()
 
-        # Парсим аргументы стратегии
+        # Создаем необходимые директории
+        lists_dir = os.path.join(self.plugin_dir, "lists")
+        os.makedirs(lists_dir, exist_ok=True)
+
+        # Гарантируем наличие пользовательских файлов (хотя бы пустых), чтобы nfqws не падал
+        user_files = [
+            "list-general-user.txt",
+            "list-exclude-user.txt",
+            "ipset-exclude-user.txt"
+        ]
+        for uf in user_files:
+            uf_path = os.path.join(lists_dir, uf)
+            if not os.path.exists(uf_path):
+                with open(uf_path, "w") as f:
+                    f.write("")
+
+        # Если передан пользовательский хостлист, копируем его в list-general-user.txt
+        if user_hostlist_path and os.path.exists(user_hostlist_path):
+            try:
+                import shutil
+                shutil.copy(user_hostlist_path, os.path.join(lists_dir, "list-general-user.txt"))
+                logger.info("Copied user hostlist to list-general-user.txt")
+            except Exception as e:
+                logger.error(f"Failed to copy user hostlist: {e}")
+
+        # Извлекаем порты для nftables
+        tcp_ports_match = re.search(r'--wf-tcp=([0-9,-]+)', strategy_args)
+        udp_ports_match = re.search(r'--wf-udp=([0-9,-]+)', strategy_args)
+
+        tcp_ports = tcp_ports_match.group(1) if tcp_ports_match else "80,443"
+        udp_ports = udp_ports_match.group(1) if udp_ports_match else "443"
+
+        # Очищаем аргументы от --wf-tcp и --wf-udp для nfqws
+        clean_args = re.sub(r'--wf-tcp=[^\s]+', '', strategy_args)
+        clean_args = re.sub(r'--wf-udp=[^\s]+', '', clean_args)
+
+        # Заменяем плейсхолдеры путей
+        bin_dir = os.path.join(self.plugin_dir, "bin") + "/"
+        clean_args = clean_args.replace("%BIN%", bin_dir).replace("%LISTS%", lists_dir + "/")
+
+        # Создаем nftables правила для извлеченных портов
+        self.setup_nftables(tcp_ports, udp_ports)
+
+        # Парсим аргументы
         args = [
             self.bin_path,
             f"--qnum={QUEUE_NUM}",
             "--daemon"
         ]
-        
-        # Добавляем аргументы стратегии, разделяя по пробелам
-        # nfqws_args_list = strategy_args.split()
-        # Но strategy_args может содержать кастомные строки с кавычками, 
-        # поэтому используем shlex для безопасного разбиения
-        import shlex
-        args.extend(shlex.split(strategy_args))
-
-        # Создаем nftables правила перед стартом демона
-        self.setup_nftables()
+        args.extend(shlex.split(clean_args))
 
         try:
             logger.info(f"Executing: {' '.join(args)}")
