@@ -11,7 +11,6 @@ import {
   staticClasses,
   TextField,
   DropdownItem,
-  ToggleField,
 } from "@decky/ui";
 import {
   callable,
@@ -554,11 +553,19 @@ const Content = () => {
       {/* Zapret Bypass Section */}
       <PanelSectionRow>
         <div style={{ position: "relative", width: "100%" }}>
-          <ToggleField
-            label={t.zapretTitle}
-            checked={status.zapret_enabled}
-            onChange={(val) => handleServiceToggle("zapret", val)}
-          />
+          <ButtonItem
+            layout="below"
+            onClick={() => handleServiceToggle("zapret", !status.zapret_enabled)}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <span style={{ fontWeight: status.zapret_enabled ? "bold" : "normal", color: status.zapret_enabled ? "#1a9fff" : "inherit" }}>
+                {t.zapretTitle}
+              </span>
+              <span style={{ fontSize: "12px", color: status.zapret_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+                {status.zapret_enabled ? t.statusActive : t.statusInactive}
+              </span>
+            </div>
+          </ButtonItem>
           {status.zapret_active && (
             <div style={{
               position: "absolute",
@@ -619,11 +626,19 @@ const Content = () => {
       {/* WARP VPN Section */}
       <PanelSectionRow>
         <div style={{ position: "relative", width: "100%" }}>
-          <ToggleField
-            label={t.warpTitle}
-            checked={status.warp_enabled}
-            onChange={(val) => handleServiceToggle("warp", val)}
-          />
+          <ButtonItem
+            layout="below"
+            onClick={() => handleServiceToggle("warp", !status.warp_enabled)}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <span style={{ fontWeight: status.warp_enabled ? "bold" : "normal", color: status.warp_enabled ? "#1a9fff" : "inherit" }}>
+                {t.warpTitle}
+              </span>
+              <span style={{ fontSize: "12px", color: status.warp_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+                {status.warp_enabled ? t.statusActive : t.statusInactive}
+              </span>
+            </div>
+          </ButtonItem>
           {status.warp_active && (
             <div style={{
               position: "absolute",

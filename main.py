@@ -5,6 +5,7 @@ import logging
 import asyncio
 import subprocess
 import functools
+import re
 import traceback as _traceback
 
 import decky
@@ -113,11 +114,35 @@ class Plugin:
 
     @_rpc
     async def get_steam_language(self) -> str:
-        """Возвращает язык интерфейса Steam"""
-        try:
-            return decky.arguments.get("language", "english")
-        except Exception:
-            return "english"
+        """Считывает язык из Steam registry.vdf"""
+        paths = []
+        if os.path.isdir("/home"):
+            try:
+                for user in os.listdir("/home"):
+                    if user != "lost+found":
+                        paths.append(f"/home/{user}/.steam/registry.vdf")
+                        paths.append(f"/home/{user}/.steam/steam/registry.vdf")
+            except Exception:
+                pass
+        
+        paths.append(os.path.expanduser("~/.steam/registry.vdf"))
+        paths.append(os.path.expanduser("~/.steam/steam/registry.vdf"))
+        
+        for path in paths:
+            if os.path.isfile(path):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    match = re.search(r'"language"\s+"([^"]+)"', content, re.IGNORECASE)
+                    if match:
+                        lang = match.group(1).lower().strip()
+                        decky.logger.info(f"Steam language detected: {lang}")
+                        return lang
+                except Exception as e:
+                    decky.logger.error(f"Error reading Steam language from {path}: {e}")
+                    
+        decky.logger.info("Steam language not found, defaulting to english")
+        return "english"
 
     @_rpc
     async def set_service_state(self, service: str, enabled: bool) -> dict:
