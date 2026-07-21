@@ -46,6 +46,14 @@ class Plugin:
         os.makedirs(SETTINGS_DIR, exist_ok=True)
         self.load_settings()
         
+        # Гарантируем наличие файла списка хостов пользователя на старте
+        if not os.path.exists(HOSTLIST_FILE):
+            try:
+                with open(HOSTLIST_FILE, "w") as f:
+                    f.write("")
+            except Exception as e:
+                logger.error(f"Failed to create default empty hostlist: {e}")
+        
         self.zapret_manager = ZapretManager(plugin_dir)
         self.warp_manager = WarpManager(plugin_dir, SETTINGS_DIR)
 
@@ -67,24 +75,29 @@ class Plugin:
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
         decky.logger.info("Zapret-Deck plugin initialized")
-        # Аварийная очистка сети при старте
+        # Очистка сети при старте
         try:
             self.warp_manager.cleanup_network()
-            self.zapret_manager.clear_nftables()
+            self.zapret_manager.destroy_nftables()
         except Exception as e:
             decky.logger.error(f"Emergency cleanup on start failed: {e}")
             
-        # Сетевая очистка при старте
-        pass
+        # Восстанавливаем сохраненное состояние служб
+        if self.settings.get("zapret_enabled", False):
+            strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
+            decky.logger.info(f"Restoring Zapret Bypass on startup with strategy: {strategy}")
+            self.zapret_manager.start(strategy, HOSTLIST_FILE)
+            
+        if self.settings.get("warp_enabled", False):
+            decky.logger.info("Restoring WARP Bypass on startup")
+            self.warp_manager.start()
 
     async def _unload(self):
         decky.logger.info("Zapret-Deck plugin unloading")
         self.zapret_manager.stop()
         self.warp_manager.stop()
-        # Сбрасываем флаги активности при выходе, чтобы они не запускались сами
-        self.settings["zapret_enabled"] = False
-        self.settings["warp_enabled"] = False
-        self.save_settings()
+        # Полностью удаляем правила nftables при выгрузке, сохраняя статус enabled в конфиге
+        self.zapret_manager.destroy_nftables()
 
     async def _uninstall(self):
         decky.logger.info("Zapret-Deck plugin uninstalling")

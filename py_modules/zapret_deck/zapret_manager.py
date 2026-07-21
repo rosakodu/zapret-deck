@@ -32,32 +32,18 @@ class ZapretManager:
         return rc == 0 and bool(stdout)
 
     def clear_nftables(self):
-        """Очищает правила nftables, созданные плагином"""
+        """Очищает правила в цепочке nftables, созданной плагином"""
         logger.info("Cleaning up nftables rules...")
-        
-        # Проверяем, существует ли таблица
         rc, stdout, _ = self._run_cmd(["nft", "list", "tables"])
-        if f"inet {TABLE_NAME}" not in stdout:
-            logger.debug(f"Table {TABLE_NAME} does not exist, nothing to clean")
-            return
+        if f"inet {TABLE_NAME}" in stdout:
+            self._run_cmd(["nft", "flush", "chain", "inet", TABLE_NAME, CHAIN_NAME])
 
-        # Получаем handles правил с нашим комментарием
-        rc, stdout, stderr = self._run_cmd(["nft", "-a", "list", "chain", "inet", TABLE_NAME, CHAIN_NAME])
-        if rc == 0:
-            for line in stdout.splitlines():
-                if RULE_COMMENT in line:
-                    # Строка вида: "... comment "Added by zapret-deck" handle 12"
-                    parts = line.split()
-                    if "handle" in parts:
-                        handle_idx = parts.index("handle") + 1
-                        if handle_idx < len(parts):
-                            handle = parts[handle_idx]
-                            logger.info(f"Deleting nftables rule handle {handle}")
-                            self._run_cmd(["nft", "delete", "rule", "inet", TABLE_NAME, CHAIN_NAME, "handle", handle])
-
-        # Пытаемся удалить цепочку и таблицу (если они пустые)
-        self._run_cmd(["nft", "delete", "chain", "inet", TABLE_NAME, CHAIN_NAME])
-        self._run_cmd(["nft", "delete", "table", "inet", TABLE_NAME])
+    def destroy_nftables(self):
+        """Полностью удаляет таблицу nftables при выгрузке плагина"""
+        logger.info("Destroying nftables table...")
+        rc, stdout, _ = self._run_cmd(["nft", "list", "tables"])
+        if f"inet {TABLE_NAME}" in stdout:
+            self._run_cmd(["nft", "delete", "table", "inet", TABLE_NAME])
 
     def _format_ports_nft(self, ports_str: str) -> str:
         # Преобразует порты "80,443" в формат nftables "{ 80, 443 }"
@@ -69,14 +55,13 @@ class ZapretManager:
     def setup_nftables(self, tcp_ports: str = "80,443", udp_ports: str = "443"):
         """Создает правила nftables для перенаправления HTTP/HTTPS/QUIC в nfqws"""
         logger.info(f"Setting up nftables rules for TCP: {tcp_ports}, UDP: {udp_ports}...")
-        self.clear_nftables()
-
-        # 1. Создаем inet таблицу zapretunix
+        
+        # 1. Создаем inet таблицу zapretunix (если её нет)
         rc, _, err = self._run_cmd(["nft", "add", "table", "inet", TABLE_NAME])
         if rc != 0:
             raise Exception(f"Failed to create nftables table: {err}")
 
-        # 2. Создаем цепочку output
+        # 2. Создаем цепочку output (если её нет)
         rc, _, err = self._run_cmd([
             "nft", "add", "chain", "inet", TABLE_NAME, CHAIN_NAME,
             "{ type filter hook output priority 0 ; policy accept ; }"
@@ -84,7 +69,10 @@ class ZapretManager:
         if rc != 0:
             raise Exception(f"Failed to create nftables chain: {err}")
 
-        # 3. Добавляем правило перенаправления TCP
+        # 3. Очищаем старые правила в цепочке
+        self.clear_nftables()
+
+        # 4. Добавляем правило перенаправления TCP
         tcp_formatted = self._format_ports_nft(tcp_ports)
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
@@ -94,7 +82,7 @@ class ZapretManager:
         if rc != 0:
             raise Exception(f"Failed to add TCP redirect rule: {err}")
 
-        # 4. Добавляем правило перенаправления UDP
+        # 5. Добавляем правило перенаправления UDP
         udp_formatted = self._format_ports_nft(udp_ports)
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
@@ -109,31 +97,57 @@ class ZapretManager:
         logger.info(f"Starting zapret (nfqws) with strategy args: {strategy_args}")
         self.stop()
 
-        lists_dir = os.path.join(self.plugin_dir, "lists")
-        os.makedirs(lists_dir, exist_ok=True)
+        import shutil
+        shared_dir = "/var/lib/zapret-deck"
+        shared_lists = os.path.join(shared_dir, "lists")
+        shared_bin = os.path.join(shared_dir, "bin")
 
-        # Копируем пользовательский список доменов, если он передан
-        if hostlist_file and os.path.exists(hostlist_file):
-            import shutil
-            try:
-                shutil.copy(hostlist_file, os.path.join(lists_dir, "list-general-user.txt"))
-                logger.info(f"Copied user hostlist {hostlist_file} to list-general-user.txt")
-            except Exception as e:
-                logger.error(f"Failed to copy user hostlist: {e}")
+        try:
+            # Создаем общие папки
+            os.makedirs(shared_lists, exist_ok=True)
+            os.makedirs(shared_bin, exist_ok=True)
 
-        # Генерируем пустые заглушки для остальных пользовательских списков
-        user_lists = [
-            "list-general-user.txt",
-            "list-google-user.txt",
-            "list-exclude-user.txt",
-            "ipset-all-user.txt",
-            "ipset-exclude-user.txt"
-        ]
-        for ul in user_lists:
-            ul_path = os.path.join(lists_dir, ul)
-            if not os.path.exists(ul_path):
-                with open(ul_path, "w") as f:
-                    pass
+            # 1. Копируем все файлы списков из локального плагина в общую папку
+            local_lists_dir = os.path.join(self.plugin_dir, "lists")
+            if os.path.exists(local_lists_dir):
+                for filename in os.listdir(local_lists_dir):
+                    src_file = os.path.join(local_lists_dir, filename)
+                    if os.path.isfile(src_file):
+                        shutil.copy2(src_file, os.path.join(shared_lists, filename))
+
+            # 2. Копируем переданный хостлист (пользовательский или тестовый для автоподбора)
+            if hostlist_file and os.path.exists(hostlist_file):
+                shutil.copy2(hostlist_file, os.path.join(shared_lists, "list-general-user.txt"))
+                logger.info(f"Copied hostlist {hostlist_file} to shared list-general-user.txt")
+
+            # 3. Генерируем пустые заглушки для остальных списков пользователей
+            user_lists = [
+                "list-general-user.txt",
+                "list-google-user.txt",
+                "list-exclude-user.txt",
+                "ipset-all-user.txt",
+                "ipset-exclude-user.txt"
+            ]
+            for ul in user_lists:
+                ul_path = os.path.join(shared_lists, ul)
+                if not os.path.exists(ul_path):
+                    with open(ul_path, "w") as f:
+                        pass
+
+            # 4. Копируем все .bin файлы (с фейковыми пакетами) из bin/ плагина в общую папку
+            local_bin_dir = os.path.join(self.plugin_dir, "bin")
+            if os.path.exists(local_bin_dir):
+                for filename in os.listdir(local_bin_dir):
+                    if filename.endswith(".bin"):
+                        src_file = os.path.join(local_bin_dir, filename)
+                        shutil.copy2(src_file, os.path.join(shared_bin, filename))
+
+            # 5. Устанавливаем права 755 и владельца nobody, чтобы nfqws мог читать файлы
+            self._run_cmd(["chmod", "-R", "755", shared_dir])
+            self._run_cmd(["chown", "-R", "nobody:nobody", shared_dir])
+        except Exception as e:
+            logger.error(f"Failed to prepare shared directory: {e}")
+            raise e
 
         # Парсим порты и отфильтровываем аргументы
         tcp_ports = "80,443"
@@ -144,8 +158,8 @@ class ZapretManager:
         
         filtered_args = []
         for arg in strat_args:
-            # Заменяем плейсхолдеры путей на абсолютные пути Steam Deck с разделителем
-            arg_replaced = arg.replace("%BIN%", os.path.join(self.plugin_dir, "bin") + "/").replace("%LISTS%", os.path.join(self.plugin_dir, "lists") + "/")
+            # Заменяем плейсхолдеры на пути к ОБЩЕЙ папке, доступной для nobody
+            arg_replaced = arg.replace("%BIN%", shared_bin + "/").replace("%LISTS%", shared_lists + "/")
             
             if arg.startswith("--wf-tcp="):
                 tcp_ports = arg.split("=")[1]
