@@ -88,7 +88,7 @@ class ZapretManager:
         tcp_formatted = self._format_ports_nft(tcp_ports)
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
-            "tcp", "dport", tcp_formatted, "counter", "queue", "num", str(QUEUE_NUM), "bypass",
+            "meta", "skuid", "!=", "nobody", "tcp", "dport", tcp_formatted, "counter", "queue", "num", str(QUEUE_NUM), "bypass",
             "comment", f'"{RULE_COMMENT}"'
         ])
         if rc != 0:
@@ -98,7 +98,7 @@ class ZapretManager:
         udp_formatted = self._format_ports_nft(udp_ports)
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
-            "udp", "dport", udp_formatted, "counter", "queue", "num", str(QUEUE_NUM), "bypass",
+            "meta", "skuid", "!=", "nobody", "udp", "dport", udp_formatted, "counter", "queue", "num", str(QUEUE_NUM), "bypass",
             "comment", f'"{RULE_COMMENT}"'
         ])
         if rc != 0:
@@ -161,7 +161,8 @@ class ZapretManager:
         args = [
             self.bin_path,
             f"--qnum={QUEUE_NUM}",
-            "--daemon"
+            "--daemon",
+            "--user=nobody"
         ]
         args.extend(filtered_args)
 
