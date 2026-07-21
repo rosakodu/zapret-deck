@@ -9,7 +9,7 @@ import {
   definePlugin,
   toaster,
 } from "@decky/api";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { FaShieldAlt } from "react-icons/fa";
 
 interface StatusInfo {
@@ -365,6 +365,28 @@ const Content = () => {
     }
   }, []);
 
+  const prevInProgress = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (status) {
+      if (prevInProgress.current && !status.autotune_in_progress) {
+        // Автоподбор только что завершился!
+        if (status.zapret_enabled && status.current_strategy_name) {
+          toaster.toast({
+            title: t.pluginTitle,
+            body: `${t.autotuneComplete} ${t.appliedStrategy}: ${status.current_strategy_name}`,
+          });
+        } else {
+          toaster.toast({
+            title: t.error,
+            body: t.noWorkingStrategy || "Не найдено подходящих стратегий",
+          });
+        }
+      }
+      prevInProgress.current = status.autotune_in_progress;
+    }
+  }, [status, t]);
+
   useEffect(() => {
     refreshStatus();
     const interval = setInterval(refreshStatus, 3000);
@@ -394,13 +416,14 @@ const Content = () => {
     }
   };
 
-  const handleStrategyChange = async (args: string) => {
+  const handleStrategyChange = async (args: string, isSelected: boolean) => {
     try {
-      const res = await applyStrategy(args);
+      const targetArgs = isSelected ? "" : args;
+      const res = await applyStrategy(targetArgs);
       if (res.success) {
         toaster.toast({
           title: t.success,
-          body: t.appliedStrategy,
+          body: isSelected ? "Выбор стратегии отменен" : t.appliedStrategy,
         });
       }
       refreshStatus();
@@ -543,7 +566,7 @@ const Content = () => {
                 <div style={{ position: "relative", width: "100%" }}>
                   <ButtonItem
                     layout="below"
-                    onClick={() => handleStrategyChange(s.args)}
+                    onClick={() => handleStrategyChange(s.args, isSelected)}
                   >
                     <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                       <span style={{ fontWeight: isSelected ? "bold" : "normal", color: isSelected ? "#1a9fff" : "inherit" }}>

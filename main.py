@@ -211,13 +211,20 @@ class Plugin:
 
     @_rpc
     async def apply_strategy(self, strategy_args: str) -> dict:
-        """Применяет выбранную стратегию"""
+        """Применяет выбранную стратегию. Если передана пустая строка, сбрасывает выбор и выключает службу."""
         self.settings["current_strategy"] = strategy_args
+        if not strategy_args:
+            self.settings["zapret_enabled"] = False
         self.save_settings()
         
-        # Если сейчас включен zapret, перезапускаем его с новой стратегией
+        # Если сейчас включен zapret, перезапускаем его с новой стратегией (или выключаем при сбросе)
         if self.settings.get("zapret_enabled", False):
-            self.zapret_manager.start(strategy_args, HOSTLIST_FILE)
+            if strategy_args:
+                self.zapret_manager.start(strategy_args, HOSTLIST_FILE)
+            else:
+                self.zapret_manager.stop()
+        else:
+            self.zapret_manager.stop()
             
         return {"success": True, "strategy": strategy_args}
 
@@ -286,17 +293,24 @@ class Plugin:
             try:
                 # Запускаем nfqws с этой стратегией и тестовым хостлистом
                 self.zapret_manager.start(strat["args"], test_hostlist)
-                await asyncio.sleep(3) # даем примениться
+                await asyncio.sleep(4) # даем nfqws полностью запуститься и примениться
                 
-                # Тестируем доступность Google/YouTube
-                proc = await asyncio.create_subprocess_exec(
-                    "curl", "-s", "-I", "-k", "--connect-timeout", "4", "https://www.youtube.com",
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-                await proc.wait()
+                # Тестируем доступность Google/YouTube с двумя попытками (на случай задержки старта демона)
+                success = False
+                for attempt in range(2):
+                    proc = await asyncio.create_subprocess_exec(
+                        "curl", "-s", "-I", "-k", "--connect-timeout", "4", "https://www.youtube.com",
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    await proc.wait()
+                    
+                    if proc.returncode == 0:
+                        success = True
+                        break
+                    await asyncio.sleep(1.5)
                 
-                if proc.returncode == 0:
+                if success:
                      logger.info(f"Autotune success! Strategy works: {strat['name']}")
                      worked_strategy = strat["args"]
                      self.settings["autotuned_strategy_name"] = strat["name"]

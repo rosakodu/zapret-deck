@@ -385,6 +385,27 @@ const Content = () => {
             console.error("Failed to get status", e);
         }
     }, []);
+    const prevInProgress = SP_REACT.useRef(false);
+    SP_REACT.useEffect(() => {
+        if (status) {
+            if (prevInProgress.current && !status.autotune_in_progress) {
+                // Автоподбор только что завершился!
+                if (status.zapret_enabled && status.current_strategy_name) {
+                    toaster.toast({
+                        title: t.pluginTitle,
+                        body: `${t.autotuneComplete} ${t.appliedStrategy}: ${status.current_strategy_name}`,
+                    });
+                }
+                else {
+                    toaster.toast({
+                        title: t.error,
+                        body: t.noWorkingStrategy || "Не найдено подходящих стратегий",
+                    });
+                }
+            }
+            prevInProgress.current = status.autotune_in_progress;
+        }
+    }, [status, t]);
     SP_REACT.useEffect(() => {
         refreshStatus();
         const interval = setInterval(refreshStatus, 3000);
@@ -412,13 +433,14 @@ const Content = () => {
             console.error(e);
         }
     };
-    const handleStrategyChange = async (args) => {
+    const handleStrategyChange = async (args, isSelected) => {
         try {
-            const res = await applyStrategy(args);
+            const targetArgs = isSelected ? "" : args;
+            const res = await applyStrategy(targetArgs);
             if (res.success) {
                 toaster.toast({
                     title: t.success,
-                    body: t.appliedStrategy,
+                    body: isSelected ? "Выбор стратегии отменен" : t.appliedStrategy,
                 });
             }
             refreshStatus();
@@ -512,7 +534,7 @@ const Content = () => {
                                 backgroundColor: "rgba(26, 159, 255, 0.1)"
                             } }))] }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.zapretSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setStrategiesExpanded(!strategiesExpanded), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "bold", color: "#a5a5a5", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.strategySelect }), SP_JSX.jsx("span", { style: { fontSize: "10px", color: "#888" }, children: strategiesExpanded ? "▼" : "▶" })] }) }) }), strategiesExpanded && (SP_JSX.jsx("div", { style: { maxHeight: "200px", overflowY: "auto", paddingRight: "4px", marginBottom: "8px", border: "1px solid #333", borderRadius: "4px", padding: "4px" }, children: strategies.map((s, idx) => {
                     const isSelected = status.current_strategy_name === s.name.replace(" (Auto)", "");
-                    return (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleStrategyChange(s.args), children: SP_JSX.jsx("div", { style: { display: "flex", alignItems: "center", width: "100%" }, children: SP_JSX.jsx("span", { style: { fontWeight: isSelected ? "bold" : "normal", color: isSelected ? "#1a9fff" : "inherit" }, children: s.name }) }) }), isSelected && (SP_JSX.jsx("div", { style: {
+                    return (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleStrategyChange(s.args, isSelected), children: SP_JSX.jsx("div", { style: { display: "flex", alignItems: "center", width: "100%" }, children: SP_JSX.jsx("span", { style: { fontWeight: isSelected ? "bold" : "normal", color: isSelected ? "#1a9fff" : "inherit" }, children: s.name }) }) }), isSelected && (SP_JSX.jsx("div", { style: {
                                         position: "absolute",
                                         top: 0,
                                         left: 0,
