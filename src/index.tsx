@@ -20,6 +20,7 @@ interface StatusInfo {
   warp_registered: boolean;
   autotune_in_progress: boolean;
   current_strategy: string;
+  current_strategy_name: string;
 }
 
 interface StrategyInfo {
@@ -70,13 +71,13 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   english: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "Zapret Bypass",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "Status",
     statusActive: "Active",
     statusInactive: "Inactive",
     zapretSettings: "Zapret Settings",
     warpSettings: "WARP Settings",
-    strategySelect: "Bypass Strategy",
+    strategySelect: "Bypass Strategies",
     runAutotune: "Auto-detect Strategy",
     autotuneRunning: "Detecting... (please wait)",
     editHostlist: "Edit Blocked Hostlist",
@@ -100,13 +101,13 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   russian: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "Обход Zapret",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "Состояние",
     statusActive: "Активен",
     statusInactive: "Неактивен",
     zapretSettings: "Настройки Zapret",
     warpSettings: "Настройки WARP",
-    strategySelect: "Стратегия обхода",
+    strategySelect: "Стратегии обхода",
     runAutotune: "Автоподбор стратегии",
     autotuneRunning: "Подбор стратегии... (ждите)",
     editHostlist: "Редактировать список сайтов",
@@ -130,13 +131,13 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   ukrainian: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "Обхід Zapret",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "Стан",
     statusActive: "Активний",
     statusInactive: "Неактивний",
     zapretSettings: "Налаштування Zapret",
     warpSettings: "Налаштування WARP",
-    strategySelect: "Стратегія обходу",
+    strategySelect: "Стратегії обходу",
     runAutotune: "Автопідбір стратегії",
     autotuneRunning: "Підбір... (зачекайте)",
     editHostlist: "Редагувати список сайтів",
@@ -160,13 +161,13 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   turkish: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "Zapret Atlatma",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "Durum",
     statusActive: "Aktif",
     statusInactive: "Pasif",
     zapretSettings: "Zapret Ayarları",
     warpSettings: "WARP Ayarları",
-    strategySelect: "Atlatma Stratejisi",
+    strategySelect: "Atlatma Stratejileri",
     runAutotune: "Stratejiyi Otomatik Algıla",
     autotuneRunning: "Algılanıyor... (lütfen bekleyin)",
     editHostlist: "Engelli Siteleri Düzenle",
@@ -190,13 +191,13 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   arabic: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "تخطي Zapret",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "الحالة",
     statusActive: "نشط",
     statusInactive: "غير نشط",
     zapretSettings: "إعدادات Zapret",
     warpSettings: "إعدادات WARP",
-    strategySelect: "استراتيجية التخطي",
+    strategySelect: "استراتيجيات التخطي",
     runAutotune: "الكشف التلقائي عن الاستراتيجية",
     autotuneRunning: "جاري الكشف... (يرجى الانتظار)",
     editHostlist: "تعديل قائمة المواقع المحجوبة",
@@ -220,13 +221,13 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   farsi: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "دور زدن Zapret",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "وضعیت",
     statusActive: "فعال",
     statusInactive: "غیرفعال",
     zapretSettings: "تنظیمات Zapret",
     warpSettings: "تنظیمات WARP",
-    strategySelect: "استراتژی دور زدن",
+    strategySelect: "استراتژی‌های دور زدن",
     runAutotune: "تشخیص خودکار استراتژی",
     autotuneRunning: "در حال تشخیص... (لطفاً صبر کنید)",
     editHostlist: "ویرایش لیست دامنه‌های مسدود شده",
@@ -250,13 +251,13 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   persian: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "دور زدن Zapret",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "وضعیت",
     statusActive: "فعال",
     statusInactive: "غیرفعال",
     zapretSettings: "تنظیمات Zapret",
     warpSettings: "تنظیمات WARP",
-    strategySelect: "استراتژی دور زدن",
+    strategySelect: "استراتژی‌های دور زدن",
     runAutotune: "تشخیص خودکار استراتژی",
     autotuneRunning: "در حال تشخیص... (لطفاً صبر کنید)",
     editHostlist: "ویرایش لیست دامنه‌های مسدود شده",
@@ -280,7 +281,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   schinese: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "Zapret 绕过",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "状态",
     statusActive: "已启用",
     statusInactive: "已禁用",
@@ -310,7 +311,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   tchinese: {
     pluginTitle: "Zapret Deck",
     zapretTitle: "Zapret 繞過",
-    warpTitle: "WARP MASQUE VPN",
+    warpTitle: "WARP",
     statusTitle: "狀態",
     statusActive: "已啟用",
     statusInactive: "已停用",
@@ -536,7 +537,7 @@ const Content = () => {
       {strategiesExpanded && (
         <div style={{ maxHeight: "200px", overflowY: "auto", paddingRight: "4px", marginBottom: "8px", border: "1px solid #333", borderRadius: "4px", padding: "4px" }}>
           {strategies.map((s, idx) => {
-            const isSelected = status.current_strategy === s.args;
+            const isSelected = status.current_strategy_name === s.name.replace(" (Auto)", "");
             return (
               <PanelSectionRow key={idx}>
                 <div style={{ position: "relative", width: "100%" }}>

@@ -144,8 +144,8 @@ class ZapretManager:
         
         filtered_args = []
         for arg in strat_args:
-            # Заменяем плейсхолдеры путей на абсолютные пути Steam Deck
-            arg_replaced = arg.replace("%BIN%", os.path.join(self.plugin_dir, "bin")).replace("%LISTS%", os.path.join(self.plugin_dir, "lists"))
+            # Заменяем плейсхолдеры путей на абсолютные пути Steam Deck с разделителем
+            arg_replaced = arg.replace("%BIN%", os.path.join(self.plugin_dir, "bin") + "/").replace("%LISTS%", os.path.join(self.plugin_dir, "lists") + "/")
             
             if arg.startswith("--wf-tcp="):
                 tcp_ports = arg.split("=")[1]

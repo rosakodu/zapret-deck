@@ -102,6 +102,12 @@ class Plugin:
     @_rpc
     async def get_status(self) -> dict:
         """Возвращает статус плагина"""
+        current_args = self.settings.get("current_strategy", "")
+        current_name = ""
+        for s in DEFAULT_STRATEGIES:
+            if s["args"] == current_args:
+                current_name = s["name"]
+                break
         return {
             "zapret_enabled": self.settings.get("zapret_enabled", False),
             "warp_enabled": self.settings.get("warp_enabled", False),
@@ -109,7 +115,8 @@ class Plugin:
             "warp_active": self.warp_manager.is_running(),
             "warp_registered": self.warp_manager.is_registered(),
             "autotune_in_progress": self.autotune_in_progress,
-            "current_strategy": self.settings.get("current_strategy", "")
+            "current_strategy": current_args,
+            "current_strategy_name": current_name
         }
 
     @_rpc
