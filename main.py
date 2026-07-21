@@ -174,7 +174,19 @@ class Plugin:
 
     @_rpc
     async def get_strategies(self) -> list:
-        """Возвращает список доступных стратегий"""
+        """Возвращает список доступных стратегий с отметкой автоподбора"""
+        autotuned_name = self.settings.get("autotuned_strategy_name")
+        if autotuned_name:
+            updated_strats = []
+            for s in DEFAULT_STRATEGIES:
+                if s["name"] == autotuned_name:
+                    updated_strats.append({
+                        "name": f"{s['name']} (Auto)",
+                        "args": s["args"]
+                    })
+                else:
+                    updated_strats.append(s)
+            return updated_strats
         return DEFAULT_STRATEGIES
 
     @_rpc
@@ -263,9 +275,11 @@ class Plugin:
                 await proc.wait()
                 
                 if proc.returncode == 0:
-                    logger.info(f"Autotune success! Strategy works: {strat['name']}")
-                    worked_strategy = strat["args"]
-                    break
+                     logger.info(f"Autotune success! Strategy works: {strat['name']}")
+                     worked_strategy = strat["args"]
+                     self.settings["autotuned_strategy_name"] = strat["name"]
+                     self.save_settings()
+                     break
             except Exception as e:
                 logger.error(f"Error during autotune test {strat['name']}: {e}")
 

@@ -88,8 +88,6 @@ const setServiceState = callable("set_service_state");
 const getStrategies = callable("get_strategies");
 const applyStrategy = callable("apply_strategy");
 const generateWarp = callable("generate_warp");
-const getHostlist = callable("get_hostlist");
-const saveHostlist = callable("save_hostlist");
 const startAutotune = callable("start_autotune");
 const getSteamLanguage = callable("get_steam_language");
 const updateResources = callable("update_resources");
@@ -365,20 +363,14 @@ const translations = {
         updating: "更新中...",
     }
 };
-const HostlistModal = ({ closeModal, onSave, currentHosts, t, }) => {
-    const [hosts, setHosts] = SP_REACT.useState(currentHosts);
-    return (SP_JSX.jsxs(DFL.ModalRoot, { children: [SP_JSX.jsx(DFL.DialogHeader, { children: t.hostlistTitle }), SP_JSX.jsx(DFL.DialogBody, { children: SP_JSX.jsx(DFL.TextField, { label: t.hostlistPlaceholder, value: hosts, onChange: (e) => setHosts(e.target.value) }) }), SP_JSX.jsxs(DFL.DialogFooter, { children: [SP_JSX.jsx(DFL.DialogButton, { onClick: closeModal, children: t.cancel }), SP_JSX.jsx(DFL.DialogButton, { onClick: () => {
-                            onSave(hosts);
-                            closeModal();
-                        }, children: t.save })] })] }));
-};
+// Редактор списка сайтов убран
 const Content = () => {
     const [status, setStatus] = SP_REACT.useState(null);
     const [strategies, setStrategies] = SP_REACT.useState([]);
     const [lang, setLang] = SP_REACT.useState("english");
-    const [hostlist, setHostlist] = SP_REACT.useState("");
     const [loadingWarp, setLoadingWarp] = SP_REACT.useState(false);
     const [updatingResources, setUpdatingResources] = SP_REACT.useState(false);
+    const [strategiesExpanded, setStrategiesExpanded] = SP_REACT.useState(false);
     const t = SP_REACT.useMemo(() => {
         return translations[lang] || translations.english;
     }, [lang]);
@@ -386,6 +378,8 @@ const Content = () => {
         try {
             const res = await getStatus();
             setStatus(res);
+            const strats = await getStrategies();
+            setStrategies(strats || []);
         }
         catch (e) {
             console.error("Failed to get status", e);
@@ -395,8 +389,6 @@ const Content = () => {
         refreshStatus();
         const interval = setInterval(refreshStatus, 3000);
         getSteamLanguage().then((l) => setLang(l || "english")).catch(() => setLang("english"));
-        getStrategies().then((strats) => setStrategies(strats || [])).catch(() => setStrategies([]));
-        getHostlist().then((hosts) => setHostlist(hosts || "")).catch(() => setHostlist(""));
         return () => clearInterval(interval);
     }, [refreshStatus]);
     const handleServiceToggle = async (service, enabled) => {
@@ -505,25 +497,9 @@ const Content = () => {
             console.error(e);
         }
     };
-    const handleEditHostlist = () => {
-        DFL.showModal(SP_JSX.jsx(HostlistModal, { closeModal: () => { }, onSave: async (hosts) => {
-                setHostlist(hosts);
-                const res = await saveHostlist(hosts);
-                if (res.success) {
-                    toaster.toast({
-                        title: t.success,
-                        body: t.appliedStrategy,
-                    });
-                }
-            }, currentHosts: hostlist, t: t }));
-    };
     if (!status) {
         return SP_JSX.jsx(DFL.PanelSection, { children: SP_JSX.jsx(DFL.PanelSectionRow, { children: "Loading..." }) });
     }
-    const strategyOptions = strategies.map((s) => ({
-        data: s.args,
-        label: s.name,
-    }));
     return (SP_JSX.jsxs(DFL.PanelSection, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("zapret", !status.zapret_enabled), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: status.zapret_enabled ? "bold" : "normal", color: status.zapret_enabled ? "#1a9fff" : "inherit" }, children: t.zapretTitle }), SP_JSX.jsx("span", { style: { fontSize: "12px", color: status.zapret_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }, children: status.zapret_enabled ? t.statusActive : t.statusInactive })] }) }), status.zapret_active && (SP_JSX.jsx("div", { style: {
                                 position: "absolute",
                                 top: 0,
@@ -534,7 +510,20 @@ const Content = () => {
                                 borderRadius: "4px",
                                 pointerEvents: "none",
                                 backgroundColor: "rgba(26, 159, 255, 0.1)"
-                            } }))] }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.zapretSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.DropdownItem, { label: t.strategySelect, rgOptions: strategyOptions, selectedOption: status.current_strategy, onChange: (opt) => handleStrategyChange(opt.data) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleEditHostlist, children: t.editHostlist }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleUpdateResources, disabled: updatingResources, children: updatingResources ? t.updating : t.updateResources }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("warp", !status.warp_enabled), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: status.warp_enabled ? "bold" : "normal", color: status.warp_enabled ? "#1a9fff" : "inherit" }, children: t.warpTitle }), SP_JSX.jsx("span", { style: { fontSize: "12px", color: status.warp_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }, children: status.warp_enabled ? t.statusActive : t.statusInactive })] }) }), status.warp_active && (SP_JSX.jsx("div", { style: {
+                            } }))] }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.zapretSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setStrategiesExpanded(!strategiesExpanded), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "bold", color: "#a5a5a5", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.strategySelect }), SP_JSX.jsx("span", { style: { fontSize: "10px", color: "#888" }, children: strategiesExpanded ? "▼" : "▶" })] }) }) }), strategiesExpanded && (SP_JSX.jsx("div", { style: { maxHeight: "200px", overflowY: "auto", paddingRight: "4px", marginBottom: "8px", border: "1px solid #333", borderRadius: "4px", padding: "4px" }, children: strategies.map((s, idx) => {
+                    const isSelected = status.current_strategy === s.args;
+                    return (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleStrategyChange(s.args), children: SP_JSX.jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: isSelected ? "bold" : "normal", color: isSelected ? "#1a9fff" : "inherit" }, children: s.name }), SP_JSX.jsx("span", { style: { fontSize: "9px", color: "#888", wordBreak: "break-all" }, children: s.args })] }) }), isSelected && (SP_JSX.jsx("div", { style: {
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        border: "1.5px solid #1a9fff",
+                                        borderRadius: "4px",
+                                        pointerEvents: "none",
+                                        backgroundColor: "rgba(26, 159, 255, 0.1)"
+                                    } }))] }) }, idx));
+                }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleUpdateResources, disabled: updatingResources, children: updatingResources ? t.updating : t.updateResources }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("warp", !status.warp_enabled), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: status.warp_enabled ? "bold" : "normal", color: status.warp_enabled ? "#1a9fff" : "inherit" }, children: t.warpTitle }), SP_JSX.jsx("span", { style: { fontSize: "12px", color: status.warp_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }, children: status.warp_enabled ? t.statusActive : t.statusInactive })] }) }), status.warp_active && (SP_JSX.jsx("div", { style: {
                                 position: "absolute",
                                 top: 0,
                                 left: 0,

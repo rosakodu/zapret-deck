@@ -1,16 +1,8 @@
 import {
   ButtonItem,
-  DialogBody,
-  DialogButton,
-  DialogFooter,
-  DialogHeader,
-  ModalRoot,
   PanelSection,
   PanelSectionRow,
-  showModal,
   staticClasses,
-  TextField,
-  DropdownItem,
 } from "@decky/ui";
 import {
   callable,
@@ -40,8 +32,6 @@ const setServiceState = callable<[string, boolean], { success: boolean; service?
 const getStrategies = callable<[], StrategyInfo[]>("get_strategies");
 const applyStrategy = callable<[string], { success: boolean; strategy?: string }>("apply_strategy");
 const generateWarp = callable<[], { success: boolean }>("generate_warp");
-const getHostlist = callable<[], string>("get_hostlist");
-const saveHostlist = callable<[string], { success: boolean; error?: string }>("save_hostlist");
 const startAutotune = callable<[], { success: boolean; error?: string }>("start_autotune");
 const getSteamLanguage = callable<[], string>("get_steam_language");
 const updateResources = callable<[], { success: boolean; updated_lists: number }>("update_resources");
@@ -349,51 +339,15 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   }
 };
 
-const HostlistModal = ({
-  closeModal,
-  onSave,
-  currentHosts,
-  t,
-}: {
-  closeModal: () => void;
-  onSave: (hosts: string) => void;
-  currentHosts: string;
-  t: Record<TranslationKeys, string>;
-}) => {
-  const [hosts, setHosts] = useState(currentHosts);
-
-  return (
-    <ModalRoot>
-      <DialogHeader>{t.hostlistTitle}</DialogHeader>
-      <DialogBody>
-        <TextField
-          label={t.hostlistPlaceholder}
-          value={hosts}
-          onChange={(e) => setHosts(e.target.value)}
-        />
-      </DialogBody>
-      <DialogFooter>
-        <DialogButton onClick={closeModal}>{t.cancel}</DialogButton>
-        <DialogButton
-          onClick={() => {
-            onSave(hosts);
-            closeModal();
-          }}
-        >
-          {t.save}
-        </DialogButton>
-      </DialogFooter>
-    </ModalRoot>
-  );
-};
+// Редактор списка сайтов убран
 
 const Content = () => {
   const [status, setStatus] = useState<StatusInfo | null>(null);
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
   const [lang, setLang] = useState<string>("english");
-  const [hostlist, setHostlist] = useState<string>("");
   const [loadingWarp, setLoadingWarp] = useState<boolean>(false);
   const [updatingResources, setUpdatingResources] = useState<boolean>(false);
+  const [strategiesExpanded, setStrategiesExpanded] = useState<boolean>(false);
 
   const t = useMemo(() => {
     return translations[lang] || translations.english;
@@ -403,6 +357,8 @@ const Content = () => {
     try {
       const res = await getStatus();
       setStatus(res);
+      const strats = await getStrategies();
+      setStrategies(strats || []);
     } catch (e) {
       console.error("Failed to get status", e);
     }
@@ -413,8 +369,6 @@ const Content = () => {
     const interval = setInterval(refreshStatus, 3000);
     
     getSteamLanguage().then((l) => setLang(l || "english")).catch(() => setLang("english"));
-    getStrategies().then((strats) => setStrategies(strats || [])).catch(() => setStrategies([]));
-    getHostlist().then((hosts) => setHostlist(hosts || "")).catch(() => setHostlist(""));
 
     return () => clearInterval(interval);
   }, [refreshStatus]);
@@ -519,34 +473,9 @@ const Content = () => {
     }
   };
 
-  const handleEditHostlist = () => {
-    showModal(
-      <HostlistModal
-        closeModal={() => {}}
-        onSave={async (hosts) => {
-          setHostlist(hosts);
-          const res = await saveHostlist(hosts);
-          if (res.success) {
-            toaster.toast({
-              title: t.success,
-              body: t.appliedStrategy,
-            });
-          }
-        }}
-        currentHosts={hostlist}
-        t={t}
-      />
-    );
-  };
-
   if (!status) {
     return <PanelSection><PanelSectionRow>Loading...</PanelSectionRow></PanelSection>;
   }
-
-  const strategyOptions = strategies.map((s) => ({
-    data: s.args,
-    label: s.name,
-  }));
 
   return (
     <PanelSection>
@@ -589,13 +518,60 @@ const Content = () => {
       </div>
 
       <PanelSectionRow>
-        <DropdownItem
-          label={t.strategySelect}
-          rgOptions={strategyOptions}
-          selectedOption={status.current_strategy}
-          onChange={(opt) => handleStrategyChange(opt.data)}
-        />
+        <ButtonItem
+          layout="below"
+          onClick={() => setStrategiesExpanded(!strategiesExpanded)}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+            <span style={{ fontWeight: "bold", color: "#a5a5a5", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              {t.strategySelect}
+            </span>
+            <span style={{ fontSize: "10px", color: "#888" }}>
+              {strategiesExpanded ? "▼" : "▶"}
+            </span>
+          </div>
+        </ButtonItem>
       </PanelSectionRow>
+
+      {strategiesExpanded && (
+        <div style={{ maxHeight: "200px", overflowY: "auto", paddingRight: "4px", marginBottom: "8px", border: "1px solid #333", borderRadius: "4px", padding: "4px" }}>
+          {strategies.map((s, idx) => {
+            const isSelected = status.current_strategy === s.args;
+            return (
+              <PanelSectionRow key={idx}>
+                <div style={{ position: "relative", width: "100%" }}>
+                  <ButtonItem
+                    layout="below"
+                    onClick={() => handleStrategyChange(s.args)}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", width: "100%" }}>
+                      <span style={{ fontWeight: isSelected ? "bold" : "normal", color: isSelected ? "#1a9fff" : "inherit" }}>
+                        {s.name}
+                      </span>
+                      <span style={{ fontSize: "9px", color: "#888", wordBreak: "break-all" }}>
+                        {s.args}
+                      </span>
+                    </div>
+                  </ButtonItem>
+                  {isSelected && (
+                    <div style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      border: "1.5px solid #1a9fff",
+                      borderRadius: "4px",
+                      pointerEvents: "none",
+                      backgroundColor: "rgba(26, 159, 255, 0.1)"
+                    }} />
+                  )}
+                </div>
+              </PanelSectionRow>
+            );
+          })}
+        </div>
+      )}
       
       <PanelSectionRow>
         <ButtonItem
@@ -604,12 +580,6 @@ const Content = () => {
           disabled={status.autotune_in_progress}
         >
           {status.autotune_in_progress ? t.autotuneRunning : t.runAutotune}
-        </ButtonItem>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ButtonItem layout="below" onClick={handleEditHostlist}>
-          {t.editHostlist}
         </ButtonItem>
       </PanelSectionRow>
 
