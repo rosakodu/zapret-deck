@@ -251,19 +251,21 @@ class Plugin:
 
         worked_strategy = None
         
-        # Создаем минимальные правила nftables для тестов
+        # Создаем временный список хостов для тестов автоподбора
+        test_hostlist = os.path.join(SETTINGS_DIR, "autotune_hostlist.txt")
         try:
-            self.zapret_manager.setup_nftables()
+            os.makedirs(SETTINGS_DIR, exist_ok=True)
+            with open(test_hostlist, "w") as f:
+                f.write("youtube.com\nwww.youtube.com\ndiscord.com\ngateway.discord.gg\n")
         except Exception as e:
-            logger.error(f"Failed to setup nftables for autotune: {e}")
-            self.autotune_in_progress = False
-            return
+            logger.error(f"Failed to create test hostlist: {e}")
+            test_hostlist = HOSTLIST_FILE
 
         for i, strat in enumerate(DEFAULT_STRATEGIES):
             logger.info(f"Autotune testing: {strat['name']}")
             try:
-                # Запускаем nfqws с этой стратегией
-                self.zapret_manager.start(strat["args"], HOSTLIST_FILE)
+                # Запускаем nfqws с этой стратегией и тестовым хостлистом
+                self.zapret_manager.start(strat["args"], test_hostlist)
                 await asyncio.sleep(3) # даем примениться
                 
                 # Тестируем доступность Google/YouTube
@@ -283,6 +285,13 @@ class Plugin:
             except Exception as e:
                 logger.error(f"Error during autotune test {strat['name']}: {e}")
 
+        # Удаляем временный файл хостлиста
+        try:
+            if os.path.exists(test_hostlist) and test_hostlist != HOSTLIST_FILE:
+                os.remove(test_hostlist)
+        except Exception as e:
+            logger.error(f"Failed to remove test hostlist: {e}")
+
         self.autotune_in_progress = False
         self.zapret_manager.stop()
 
@@ -290,9 +299,9 @@ class Plugin:
             self.settings["current_strategy"] = worked_strategy
             self.settings["zapret_enabled"] = True
             self.save_settings()
-            # Запускаем окончательно
+            # Запускаем окончательно с оригинальным списком хостов пользователя
             self.zapret_manager.start(worked_strategy, HOSTLIST_FILE)
-            logger.info("Autotune complete. Applied working strategy.")
+            logger.info("Autotune complete. Applied working strategy and enabled Zapret Bypass.")
         else:
             logger.info("Autotune failed. No working strategy found.")
 

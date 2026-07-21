@@ -544,12 +544,9 @@ const Content = () => {
                     layout="below"
                     onClick={() => handleStrategyChange(s.args)}
                   >
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", width: "100%" }}>
+                    <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                       <span style={{ fontWeight: isSelected ? "bold" : "normal", color: isSelected ? "#1a9fff" : "inherit" }}>
                         {s.name}
-                      </span>
-                      <span style={{ fontSize: "9px", color: "#888", wordBreak: "break-all" }}>
-                        {s.args}
                       </span>
                     </div>
                   </ButtonItem>
