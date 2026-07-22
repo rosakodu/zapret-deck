@@ -121,6 +121,7 @@ const translations = {
         appliedStrategy: "Applied strategy",
         updateResources: "Update Lists & Strategies",
         updating: "Updating...",
+        language: "Language",
     },
     russian: {
         pluginTitle: "Zapret Deck",
@@ -151,6 +152,7 @@ const translations = {
         appliedStrategy: "Применена стратегия",
         updateResources: "Обновить списки и стратегии",
         updating: "Обновление...",
+        language: "Язык",
     },
     ukrainian: {
         pluginTitle: "Zapret Deck",
@@ -181,6 +183,7 @@ const translations = {
         appliedStrategy: "Застосовано стратегію",
         updateResources: "Оновити списки та стратегії",
         updating: "Оновлення...",
+        language: "Мова",
     },
     turkish: {
         pluginTitle: "Zapret Deck",
@@ -211,6 +214,7 @@ const translations = {
         appliedStrategy: "Uygulanan strateji",
         updateResources: "Listeleri ve Stratejileri Güncelle",
         updating: "Güncelleniyor...",
+        language: "Dil",
     },
     arabic: {
         pluginTitle: "Zapret Deck",
@@ -241,6 +245,7 @@ const translations = {
         appliedStrategy: "تم تطبيق الاستراتيجية",
         updateResources: "تحديث القوائم والاستراتيجيات",
         updating: "جاري التحديث...",
+        language: "اللغة",
     },
     farsi: {
         pluginTitle: "Zapret Deck",
@@ -271,6 +276,7 @@ const translations = {
         appliedStrategy: "استراتژی اعمال شد",
         updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
         updating: "در حال بروزرسانی...",
+        language: "زبان",
     },
     persian: {
         pluginTitle: "Zapret Deck",
@@ -301,6 +307,7 @@ const translations = {
         appliedStrategy: "استراتژی اعمال شد",
         updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
         updating: "در حال بروزرسانی...",
+        language: "زبان",
     },
     schinese: {
         pluginTitle: "Zapret Deck",
@@ -331,6 +338,7 @@ const translations = {
         appliedStrategy: "已应用策略",
         updateResources: "更新域名列表与策略",
         updating: "更新中...",
+        language: "语言",
     },
     tchinese: {
         pluginTitle: "Zapret Deck",
@@ -361,8 +369,19 @@ const translations = {
         appliedStrategy: "已應用策略",
         updateResources: "更新網網域名稱列表與策略",
         updating: "更新中...",
+        language: "語言",
     }
 };
+const LANGUAGE_OPTIONS = [
+    { label: "English", data: "english" },
+    { label: "Русский", data: "russian" },
+    { label: "Українська", data: "ukrainian" },
+    { label: "Türkçe", data: "turkish" },
+    { label: "العربية", data: "arabic" },
+    { label: "فارسی", data: "persian" },
+    { label: "简体中文", data: "schinese" },
+    { label: "繁體中文", data: "tchinese" },
+];
 // Редактор списка сайтов убран
 const Content = () => {
     const [status, setStatus] = SP_REACT.useState(null);
@@ -555,7 +574,7 @@ const Content = () => {
                                         pointerEvents: "none",
                                         backgroundColor: "rgba(26, 159, 255, 0.1)"
                                     } }))] }) }, idx));
-                }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleUpdateResources, disabled: updatingResources, children: updatingResources ? t.updating : t.updateResources }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("warp", !isWarpActive), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "normal", color: "inherit" }, children: t.warpTitle }), SP_JSX.jsx("span", { style: { fontSize: "12px", color: isWarpActive ? "#1a9fff" : "#888", fontWeight: "bold" }, children: isWarpActive ? t.statusActive : t.statusInactive })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }));
+                }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleUpdateResources, disabled: updatingResources, children: updatingResources ? t.updating : t.updateResources }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("warp", !isWarpActive), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "normal", color: "inherit" }, children: t.warpTitle }), SP_JSX.jsx("span", { style: { fontSize: "12px", color: isWarpActive ? "#1a9fff" : "#888", fontWeight: "bold" }, children: isWarpActive ? t.statusActive : t.statusInactive })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.language }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.Field, { label: t.language, children: SP_JSX.jsx(DFL.Dropdown, { selectedOption: lang, onChange: (opt) => setLang(opt.data), rgOptions: LANGUAGE_OPTIONS }) }) })] }));
 };
 var index = definePlugin(() => {
     return {

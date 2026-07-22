@@ -1,5 +1,7 @@
 import {
   ButtonItem,
+  Dropdown,
+  Field,
   PanelSection,
   PanelSectionRow,
   staticClasses,
@@ -65,7 +67,8 @@ type TranslationKeys =
   | "autotuneComplete"
   | "appliedStrategy"
   | "updateResources"
-  | "updating";
+  | "updating"
+  | "language";
 
 const translations: Record<string, Record<TranslationKeys, string>> = {
   english: {
@@ -97,6 +100,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "Applied strategy",
     updateResources: "Update Lists & Strategies",
     updating: "Updating...",
+    language: "Language",
   },
   russian: {
     pluginTitle: "Zapret Deck",
@@ -127,6 +131,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "Применена стратегия",
     updateResources: "Обновить списки и стратегии",
     updating: "Обновление...",
+    language: "Язык",
   },
   ukrainian: {
     pluginTitle: "Zapret Deck",
@@ -157,6 +162,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "Застосовано стратегію",
     updateResources: "Оновити списки та стратегії",
     updating: "Оновлення...",
+    language: "Мова",
   },
   turkish: {
     pluginTitle: "Zapret Deck",
@@ -187,6 +193,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "Uygulanan strateji",
     updateResources: "Listeleri ve Stratejileri Güncelle",
     updating: "Güncelleniyor...",
+    language: "Dil",
   },
   arabic: {
     pluginTitle: "Zapret Deck",
@@ -217,6 +224,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "تم تطبيق الاستراتيجية",
     updateResources: "تحديث القوائم والاستراتيجيات",
     updating: "جاري التحديث...",
+    language: "اللغة",
   },
   farsi: {
     pluginTitle: "Zapret Deck",
@@ -247,6 +255,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "استراتژی اعمال شد",
     updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
     updating: "در حال بروزرسانی...",
+    language: "زبان",
   },
   persian: {
     pluginTitle: "Zapret Deck",
@@ -277,6 +286,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "استراتژی اعمال شد",
     updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
     updating: "در حال بروزرسانی...",
+    language: "زبان",
   },
   schinese: {
     pluginTitle: "Zapret Deck",
@@ -307,6 +317,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "已应用策略",
     updateResources: "更新域名列表与策略",
     updating: "更新中...",
+    language: "语言",
   },
   tchinese: {
     pluginTitle: "Zapret Deck",
@@ -337,8 +348,20 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     appliedStrategy: "已應用策略",
     updateResources: "更新網網域名稱列表與策略",
     updating: "更新中...",
+    language: "語言",
   }
 };
+
+const LANGUAGE_OPTIONS = [
+  { label: "English", data: "english" },
+  { label: "Русский", data: "russian" },
+  { label: "Українська", data: "ukrainian" },
+  { label: "Türkçe", data: "turkish" },
+  { label: "العربية", data: "arabic" },
+  { label: "فارسی", data: "persian" },
+  { label: "简体中文", data: "schinese" },
+  { label: "繁體中文", data: "tchinese" },
+];
 
 // Редактор списка сайтов убран
 
@@ -661,6 +684,23 @@ const Content = () => {
         >
           {loadingWarp ? t.generatingWarp : t.generateWarp}
         </ButtonItem>
+      </PanelSectionRow>
+
+      {/* Language Section */}
+      <div style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }}>
+        <span style={{ fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          {t.language}
+        </span>
+      </div>
+
+      <PanelSectionRow>
+        <Field label={t.language}>
+          <Dropdown
+            selectedOption={lang}
+            onChange={(opt) => setLang(opt.data)}
+            rgOptions={LANGUAGE_OPTIONS}
+          />
+        </Field>
       </PanelSectionRow>
     </PanelSection>
   );
