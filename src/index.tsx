@@ -543,31 +543,26 @@ const Content = () => {
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.zapretTitle}
             </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "12px", color: isZapretActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-                {isZapretActive ? t.statusActive : t.statusInactive}
-              </span>
+            <div style={{
+              width: "36px",
+              height: "20px",
+              borderRadius: "10px",
+              backgroundColor: isZapretActive ? "#1a9fff" : "#3a3a3a",
+              position: "relative",
+              transition: "background-color 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              padding: "2px",
+              boxSizing: "border-box"
+            }}>
               <div style={{
-                width: "36px",
-                height: "20px",
-                borderRadius: "10px",
-                backgroundColor: isZapretActive ? "#1a9fff" : "#3a3a3a",
-                position: "relative",
-                transition: "background-color 0.2s ease",
-                display: "flex",
-                alignItems: "center",
-                padding: "2px",
-                boxSizing: "border-box"
-              }}>
-                <div style={{
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "50%",
-                  backgroundColor: "#ffffff",
-                  transform: isZapretActive ? "translateX(16px)" : "translateX(0px)",
-                  transition: "transform 0.2s ease"
-                }} />
-              </div>
+                width: "16px",
+                height: "16px",
+                borderRadius: "50%",
+                backgroundColor: "#ffffff",
+                transform: isZapretActive ? "translateX(16px)" : "translateX(0px)",
+                transition: "transform 0.2s ease"
+              }} />
             </div>
           </div>
         </ButtonItem>
@@ -662,31 +657,26 @@ const Content = () => {
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.warpTitle}
             </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "12px", color: isWarpActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-                {isWarpActive ? t.statusActive : t.statusInactive}
-              </span>
+            <div style={{
+              width: "36px",
+              height: "20px",
+              borderRadius: "10px",
+              backgroundColor: isWarpActive ? "#1a9fff" : "#3a3a3a",
+              position: "relative",
+              transition: "background-color 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              padding: "2px",
+              boxSizing: "border-box"
+            }}>
               <div style={{
-                width: "36px",
-                height: "20px",
-                borderRadius: "10px",
-                backgroundColor: isWarpActive ? "#1a9fff" : "#3a3a3a",
-                position: "relative",
-                transition: "background-color 0.2s ease",
-                display: "flex",
-                alignItems: "center",
-                padding: "2px",
-                boxSizing: "border-box"
-              }}>
-                <div style={{
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "50%",
-                  backgroundColor: "#ffffff",
-                  transform: isWarpActive ? "translateX(16px)" : "translateX(0px)",
-                  transition: "transform 0.2s ease"
-                }} />
-              </div>
+                width: "16px",
+                height: "16px",
+                borderRadius: "50%",
+                backgroundColor: "#ffffff",
+                transform: isWarpActive ? "translateX(16px)" : "translateX(0px)",
+                transition: "transform 0.2s ease"
+              }} />
             </div>
           </div>
         </ButtonItem>

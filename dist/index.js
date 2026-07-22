@@ -551,25 +551,25 @@ const Content = () => {
     }
     const isZapretActive = Boolean(!status.autotune_in_progress && (status.zapret_enabled || status.zapret_active));
     const isWarpActive = Boolean(status.warp_enabled || status.warp_active);
-    return (SP_JSX.jsxs(DFL.PanelSection, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("zapret", !isZapretActive), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "normal", color: "inherit" }, children: t.zapretTitle }), SP_JSX.jsxs("div", { style: { display: "flex", alignItems: "center", gap: "10px" }, children: [SP_JSX.jsx("span", { style: { fontSize: "12px", color: isZapretActive ? "#1a9fff" : "#888", fontWeight: "bold" }, children: isZapretActive ? t.statusActive : t.statusInactive }), SP_JSX.jsx("div", { style: {
-                                            width: "36px",
-                                            height: "20px",
-                                            borderRadius: "10px",
-                                            backgroundColor: isZapretActive ? "#1a9fff" : "#3a3a3a",
-                                            position: "relative",
-                                            transition: "background-color 0.2s ease",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            padding: "2px",
-                                            boxSizing: "border-box"
-                                        }, children: SP_JSX.jsx("div", { style: {
-                                                width: "16px",
-                                                height: "16px",
-                                                borderRadius: "50%",
-                                                backgroundColor: "#ffffff",
-                                                transform: isZapretActive ? "translateX(16px)" : "translateX(0px)",
-                                                transition: "transform 0.2s ease"
-                                            } }) })] })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.zapretSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setStrategiesExpanded(!strategiesExpanded), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "bold", color: "#a5a5a5", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.strategySelect }), SP_JSX.jsx("span", { style: { fontSize: "10px", color: "#888" }, children: strategiesExpanded ? "▼" : "▶" })] }) }) }), strategiesExpanded && (SP_JSX.jsx("div", { style: { maxHeight: "200px", overflowY: "auto", paddingRight: "4px", marginBottom: "8px", border: "1px solid #333", borderRadius: "4px", padding: "4px" }, children: strategies.map((s, idx) => {
+    return (SP_JSX.jsxs(DFL.PanelSection, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("zapret", !isZapretActive), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "normal", color: "inherit" }, children: t.zapretTitle }), SP_JSX.jsx("div", { style: {
+                                    width: "36px",
+                                    height: "20px",
+                                    borderRadius: "10px",
+                                    backgroundColor: isZapretActive ? "#1a9fff" : "#3a3a3a",
+                                    position: "relative",
+                                    transition: "background-color 0.2s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    padding: "2px",
+                                    boxSizing: "border-box"
+                                }, children: SP_JSX.jsx("div", { style: {
+                                        width: "16px",
+                                        height: "16px",
+                                        borderRadius: "50%",
+                                        backgroundColor: "#ffffff",
+                                        transform: isZapretActive ? "translateX(16px)" : "translateX(0px)",
+                                        transition: "transform 0.2s ease"
+                                    } }) })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.zapretSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setStrategiesExpanded(!strategiesExpanded), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "bold", color: "#a5a5a5", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.strategySelect }), SP_JSX.jsx("span", { style: { fontSize: "10px", color: "#888" }, children: strategiesExpanded ? "▼" : "▶" })] }) }) }), strategiesExpanded && (SP_JSX.jsx("div", { style: { maxHeight: "200px", overflowY: "auto", paddingRight: "4px", marginBottom: "8px", border: "1px solid #333", borderRadius: "4px", padding: "4px" }, children: strategies.map((s, idx) => {
                     const isSelected = status.current_strategy_name === s.name.replace(" (Auto)", "");
                     return (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { position: "relative", width: "100%" }, children: [SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleStrategyChange(s.args, isSelected), children: SP_JSX.jsx("div", { style: { display: "flex", alignItems: "center", width: "100%" }, children: SP_JSX.jsx("span", { style: { fontWeight: isSelected ? "bold" : "normal", color: isSelected ? "#1a9fff" : "inherit" }, children: s.name }) }) }), isSelected && (SP_JSX.jsx("div", { style: {
                                         position: "absolute",
@@ -582,25 +582,25 @@ const Content = () => {
                                         pointerEvents: "none",
                                         backgroundColor: "rgba(26, 159, 255, 0.1)"
                                     } }))] }) }, idx));
-                }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleUpdateResources, disabled: updatingResources, children: updatingResources ? t.updating : t.updateResources }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("warp", !isWarpActive), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "normal", color: "inherit" }, children: t.warpTitle }), SP_JSX.jsxs("div", { style: { display: "flex", alignItems: "center", gap: "10px" }, children: [SP_JSX.jsx("span", { style: { fontSize: "12px", color: isWarpActive ? "#1a9fff" : "#888", fontWeight: "bold" }, children: isWarpActive ? t.statusActive : t.statusInactive }), SP_JSX.jsx("div", { style: {
-                                            width: "36px",
-                                            height: "20px",
-                                            borderRadius: "10px",
-                                            backgroundColor: isWarpActive ? "#1a9fff" : "#3a3a3a",
-                                            position: "relative",
-                                            transition: "background-color 0.2s ease",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            padding: "2px",
-                                            boxSizing: "border-box"
-                                        }, children: SP_JSX.jsx("div", { style: {
-                                                width: "16px",
-                                                height: "16px",
-                                                borderRadius: "50%",
-                                                backgroundColor: "#ffffff",
-                                                transform: isWarpActive ? "translateX(16px)" : "translateX(0px)",
-                                                transition: "transform 0.2s ease"
-                                            } }) })] })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }));
+                }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleStartAutotune, disabled: status.autotune_in_progress, children: status.autotune_in_progress ? t.autotuneRunning : t.runAutotune }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleUpdateResources, disabled: updatingResources, children: updatingResources ? t.updating : t.updateResources }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => handleServiceToggle("warp", !isWarpActive), children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { style: { fontWeight: "normal", color: "inherit" }, children: t.warpTitle }), SP_JSX.jsx("div", { style: {
+                                    width: "36px",
+                                    height: "20px",
+                                    borderRadius: "10px",
+                                    backgroundColor: isWarpActive ? "#1a9fff" : "#3a3a3a",
+                                    position: "relative",
+                                    transition: "background-color 0.2s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    padding: "2px",
+                                    boxSizing: "border-box"
+                                }, children: SP_JSX.jsx("div", { style: {
+                                        width: "16px",
+                                        height: "16px",
+                                        borderRadius: "50%",
+                                        backgroundColor: "#ffffff",
+                                        transform: isWarpActive ? "translateX(16px)" : "translateX(0px)",
+                                        transition: "transform 0.2s ease"
+                                    } }) })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }));
 };
 var index = definePlugin(() => {
     return {
