@@ -390,10 +390,11 @@ const Content = () => {
         if (status) {
             if (prevInProgress.current && !status.autotune_in_progress) {
                 // Автоподбор только что завершился!
-                if (status.zapret_enabled && status.current_strategy_name) {
+                if (status.zapret_enabled || status.current_strategy) {
+                    const stratName = status.current_strategy_name || "Авто";
                     toaster.toast({
                         title: t.pluginTitle,
-                        body: `${t.autotuneComplete} ${t.appliedStrategy}: ${status.current_strategy_name}`,
+                        body: `${t.autotuneComplete} ${t.appliedStrategy}: ${stratName}`,
                     });
                 }
                 else {
@@ -506,6 +507,21 @@ const Content = () => {
                     title: t.pluginTitle,
                     body: t.autotuneRunning,
                 });
+                // Частый опрос состояния каждые 500мс во время подбора
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const st = await getStatus();
+                        setStatus(st);
+                        const strats = await getStrategies();
+                        setStrategies(strats || []);
+                        if (!st.autotune_in_progress) {
+                            clearInterval(pollInterval);
+                        }
+                    }
+                    catch (err) {
+                        console.error(err);
+                    }
+                }, 500);
             }
             else {
                 toaster.toast({
@@ -513,7 +529,6 @@ const Content = () => {
                     body: res.error || "Failed to start autotune",
                 });
             }
-            refreshStatus();
         }
         catch (e) {
             console.error(e);

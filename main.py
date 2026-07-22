@@ -314,15 +314,19 @@ class Plugin:
                 for target_url in ["https://www.youtube.com", "https://www.google.com"]:
                     for attempt in range(2):
                         proc = await asyncio.create_subprocess_exec(
-                            "curl", "-4", "-s", "-I", "-k", "--connect-timeout", "3", target_url,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
+                            "/usr/bin/curl", "-4", "-s", "-I", "-k", "--connect-timeout", "4", target_url,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE
                         )
-                        await proc.wait()
+                        stdout, stderr = await proc.communicate()
                         
                         if proc.returncode == 0:
+                            logger.info(f"Autotune target {target_url} HTTP check SUCCESS (rc=0)")
                             success = True
                             break
+                        else:
+                            err_msg = stderr.decode('utf-8', errors='ignore').strip()
+                            logger.info(f"Autotune target {target_url} attempt {attempt+1} failed (rc={proc.returncode}): {err_msg}")
                         await asyncio.sleep(1)
                     if success:
                         break
