@@ -495,6 +495,8 @@ const Content = () => {
             setStrategies(strats || []);
             if (!st.autotune_in_progress) {
               clearInterval(pollInterval);
+              // Дополнительное подтверждение статуса через 1с
+              setTimeout(refreshStatus, 1000);
             }
           } catch (err) {
             console.error(err);

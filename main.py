@@ -356,12 +356,13 @@ class Plugin:
             # Запускаем окончательно с оригинальным списком хостов пользователя
             self.zapret_manager.start(worked_strategy, HOSTLIST_FILE)
             logger.info("Autotune complete. Applied working strategy and enabled Zapret Bypass.")
+            await asyncio.sleep(1)
         else:
             self.settings["zapret_enabled"] = False
             self.save_settings()
             logger.info("Autotune failed. No working strategy found.")
 
-        # В самом конце сбрасываем флаг подбора, когда служба уже запущена и статус сохранен
+        # В самом конце сбрасываем флаг подбора, когда служба уже полностью запущена
         self.autotune_in_progress = False
 
     @_rpc
