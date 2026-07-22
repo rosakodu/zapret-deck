@@ -22,10 +22,10 @@ class WarpManager:
         os.makedirs(self.scripts_dir, exist_ok=True)
         os.makedirs(self.settings_dir, exist_ok=True)
 
-    def _run_cmd(self, cmd: list) -> tuple:
+    def _run_cmd(self, cmd: list, timeout: int = 15) -> tuple:
         try:
             logger.debug(f"Running command: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             return result.returncode, result.stdout.strip(), result.stderr.strip()
         except Exception as e:
             logger.error(f"Failed to run command {' '.join(cmd)}: {e}")
@@ -51,7 +51,7 @@ class WarpManager:
             "-c", self.config_path
         ]
         
-        rc, out, err = self._run_cmd(cmd)
+        rc, out, err = self._run_cmd(cmd, timeout=25)
         if rc == 0 and os.path.exists(self.config_path):
             logger.info("WARP registered successfully")
             return True

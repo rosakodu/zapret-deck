@@ -505,34 +505,19 @@ const Content = () => {
     <PanelSection>
       {/* Zapret Bypass Section */}
       <PanelSectionRow>
-        <div style={{ position: "relative", width: "100%" }}>
-          <ButtonItem
-            layout="below"
-            onClick={() => handleServiceToggle("zapret", !status.zapret_enabled)}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-              <span style={{ fontWeight: status.zapret_enabled ? "bold" : "normal", color: status.zapret_enabled ? "#1a9fff" : "inherit" }}>
-                {t.zapretTitle}
-              </span>
-              <span style={{ fontSize: "12px", color: status.zapret_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-                {status.zapret_enabled ? t.statusActive : t.statusInactive}
-              </span>
-            </div>
-          </ButtonItem>
-          {status.zapret_active && (
-            <div style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              border: "1.5px solid #1a9fff",
-              borderRadius: "4px",
-              pointerEvents: "none",
-              backgroundColor: "rgba(26, 159, 255, 0.1)"
-            }} />
-          )}
-        </div>
+        <ButtonItem
+          layout="below"
+          onClick={() => handleServiceToggle("zapret", !status.zapret_enabled)}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+            <span style={{ fontWeight: "normal", color: "inherit" }}>
+              {t.zapretTitle}
+            </span>
+            <span style={{ fontSize: "12px", color: status.zapret_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+              {status.zapret_enabled ? t.statusActive : t.statusInactive}
+            </span>
+          </div>
+        </ButtonItem>
       </PanelSectionRow>
 
       <div style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }}>
@@ -616,34 +601,19 @@ const Content = () => {
 
       {/* WARP VPN Section */}
       <PanelSectionRow>
-        <div style={{ position: "relative", width: "100%" }}>
-          <ButtonItem
-            layout="below"
-            onClick={() => handleServiceToggle("warp", !status.warp_enabled)}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-              <span style={{ fontWeight: status.warp_enabled ? "bold" : "normal", color: status.warp_enabled ? "#1a9fff" : "inherit" }}>
-                {t.warpTitle}
-              </span>
-              <span style={{ fontSize: "12px", color: status.warp_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-                {status.warp_enabled ? t.statusActive : t.statusInactive}
-              </span>
-            </div>
-          </ButtonItem>
-          {status.warp_active && (
-            <div style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              border: "1.5px solid #1a9fff",
-              borderRadius: "4px",
-              pointerEvents: "none",
-              backgroundColor: "rgba(26, 159, 255, 0.1)"
-            }} />
-          )}
-        </div>
+        <ButtonItem
+          layout="below"
+          onClick={() => handleServiceToggle("warp", !status.warp_enabled)}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+            <span style={{ fontWeight: "normal", color: "inherit" }}>
+              {t.warpTitle}
+            </span>
+            <span style={{ fontSize: "12px", color: status.warp_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+              {status.warp_enabled ? t.statusActive : t.statusInactive}
+            </span>
+          </div>
+        </ButtonItem>
       </PanelSectionRow>
 
       <div style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }}>
@@ -653,12 +623,14 @@ const Content = () => {
       </div>
 
       <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "4px 8px" }}>
-          <span>{t.warpStatus}</span>
-          <span style={{ color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold" }}>
-            {status.warp_registered ? t.warpRegistered : t.warpNotRegistered}
-          </span>
-        </div>
+        <ButtonItem layout="below">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+            <span>{t.warpStatus}</span>
+            <span style={{ color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }}>
+              {status.warp_registered ? t.warpRegistered : t.warpNotRegistered}
+            </span>
+          </div>
+        </ButtonItem>
       </PanelSectionRow>
 
       <PanelSectionRow>

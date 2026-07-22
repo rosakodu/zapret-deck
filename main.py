@@ -231,7 +231,21 @@ class Plugin:
     @_rpc
     async def generate_warp(self) -> dict:
         """Регистрирует новый аккаунт WARP"""
+        # Если zapret выключен, временно активируем его для связи с api.cloudflareclient.com в обход блокировок РКН
+        zapret_was_active = self.zapret_manager.is_running()
+        if not zapret_was_active:
+            try:
+                strategy = self.settings.get("current_strategy") or DEFAULT_STRATEGIES[0]["args"]
+                self.zapret_manager.start(strategy, HOSTLIST_FILE)
+                await asyncio.sleep(2)
+            except Exception as e:
+                logger.error(f"Failed to start temporary zapret for WARP reg: {e}")
+
         success = self.warp_manager.register()
+
+        if not zapret_was_active:
+            self.zapret_manager.stop()
+
         return {"success": success}
 
     @_rpc
@@ -283,7 +297,7 @@ class Plugin:
         try:
             os.makedirs(SETTINGS_DIR, exist_ok=True)
             with open(test_hostlist, "w") as f:
-                f.write("youtube.com\nwww.youtube.com\ndiscord.com\ngateway.discord.gg\n")
+                f.write("youtube.com\nwww.youtube.com\ngooglevideo.com\ngoogle.com\nwww.google.com\ndiscord.com\ngateway.discord.gg\n")
         except Exception as e:
             logger.error(f"Failed to create test hostlist: {e}")
             test_hostlist = HOSTLIST_FILE
@@ -293,22 +307,25 @@ class Plugin:
             try:
                 # Запускаем nfqws с этой стратегией и тестовым хостлистом
                 self.zapret_manager.start(strat["args"], test_hostlist)
-                await asyncio.sleep(4) # даем nfqws полностью запуститься и примениться
+                await asyncio.sleep(3) # даем nfqws примениться
                 
-                # Тестируем доступность Google/YouTube с двумя попытками (на случай задержки старта демона)
+                # Тестируем доступность с обязательным флагом -4 (принудительно IPv4, исключая задержки IPv6)
                 success = False
-                for attempt in range(2):
-                    proc = await asyncio.create_subprocess_exec(
-                        "curl", "-s", "-I", "-k", "--connect-timeout", "4", "https://www.youtube.com",
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    await proc.wait()
-                    
-                    if proc.returncode == 0:
-                        success = True
+                for target_url in ["https://www.youtube.com", "https://www.google.com"]:
+                    for attempt in range(2):
+                        proc = await asyncio.create_subprocess_exec(
+                            "curl", "-4", "-s", "-I", "-k", "--connect-timeout", "3", target_url,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        await proc.wait()
+                        
+                        if proc.returncode == 0:
+                            success = True
+                            break
+                        await asyncio.sleep(1)
+                    if success:
                         break
-                    await asyncio.sleep(1.5)
                 
                 if success:
                      logger.info(f"Autotune success! Strategy works: {strat['name']}")

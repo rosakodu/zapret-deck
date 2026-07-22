@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Данные для подключения к Steam Deck
-DECK_IP="192.168.0.196"
+DECK_IP="${DECK_IP:-192.168.0.102}"
 DECK_USER="deck"
 DECK_PASS="0451"
 PLUGIN_NAME="zapret-deck"
