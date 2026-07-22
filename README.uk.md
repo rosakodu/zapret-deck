@@ -1,6 +1,12 @@
 # 🚀 Zapret Deck
 
-[English](README.md) | [Русский](README.ru.md) | [Українська](README.uk.md) | [Türkçe](README.tr.md) | [العربية](README.ar.md) | [فارسی](README.fa.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+🇬🇧 [English](README.md) | 🇷🇺 [Русский](README.ru.md) | 🇺🇦 [Українська](README.uk.md) | 🇹🇷 [Türkçe](README.tr.md) | 🇸🇦 [العربية](README.ar.md) | 🇮🇷 [فارسی](README.fa.md) | 🇨🇳 [简体中文](README.zh-CN.md) | 🇭🇰 [繁體中文](README.zh-TW.md)
+
+---
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="Zapret Deck Screenshot" width="650"/>
+</p>
 
 ---
 
@@ -28,7 +34,7 @@
 
 ## 📦 Встановлення
 
-### Варіант 1. Автоматично через Decky Loader (ZIP)
+### Вариант 1. Автоматично через Decky Loader (ZIP)
 
 1. Відкрийте розділ **Releases** на GitHub та завантажте `zapret-deck.zip` з останнього релізу (`v1.0.0`).
 2. Перейдіть у **Decky Loader** -> *Налаштування* -> *Розробник*.
@@ -46,17 +52,6 @@ sudo unzip -o /tmp/zapret-deck.zip -d /home/deck/homebrew/plugins/ && \
 sudo chmod +x /home/deck/homebrew/plugins/zapret-deck/bin/* && \
 sudo systemctl restart plugin_loader.service
 ```
-
----
-
-## 🎮 Як використовувати
-
-1. Натисніть кнопку **`...` (Quick Access)** на Steam Deck та відкрийте вкладку **Decky Loader**.
-2. Оберіть **Zapret Deck**.
-3. Натисніть **«Автопідбір стратегії»**:
-   - Плагін перевірить мережу та автоматично застосує робочу стратегію (`ALT`).
-   - Напис **Обхід Zapret** стане синім та змінить стан на **«Активний»**.
-4. За потреби перемкніть тумблер **WARP** для повного тунелювання та зміни IP через Cloudflare.
 
 ---
 

@@ -1,6 +1,12 @@
 # 🚀 Zapret Deck
 
-[English](README.md) | [Русский](README.ru.md) | [Українська](README.uk.md) | [Türkçe](README.tr.md) | [العربية](README.ar.md) | [فارسی](README.fa.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+🇬🇧 [English](README.md) | 🇷🇺 [Русский](README.ru.md) | 🇺🇦 [Українська](README.uk.md) | 🇹🇷 [Türkçe](README.tr.md) | 🇸🇦 [العربية](README.ar.md) | 🇮🇷 [فارسی](README.fa.md) | 🇨🇳 [简体中文](README.zh-CN.md) | 🇭🇰 [繁體中文](README.zh-TW.md)
+
+---
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="Zapret Deck Screenshot" width="650"/>
+</p>
 
 ---
 
