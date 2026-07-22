@@ -518,20 +518,23 @@ const Content = () => {
     return <PanelSection><PanelSectionRow>Loading...</PanelSectionRow></PanelSection>;
   }
 
+  const isZapretActive = Boolean(!status.autotune_in_progress && (status.zapret_enabled || status.zapret_active));
+  const isWarpActive = Boolean(status.warp_enabled || status.warp_active);
+
   return (
     <PanelSection>
       {/* Zapret Bypass Section */}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={() => handleServiceToggle("zapret", !(status.zapret_enabled || status.zapret_active))}
+          onClick={() => handleServiceToggle("zapret", !isZapretActive)}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.zapretTitle}
             </span>
-            <span style={{ fontSize: "12px", color: (status.zapret_enabled || status.zapret_active) ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-              {(status.zapret_enabled || status.zapret_active) ? t.statusActive : t.statusInactive}
+            <span style={{ fontSize: "12px", color: isZapretActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+              {isZapretActive ? t.statusActive : t.statusInactive}
             </span>
           </div>
         </ButtonItem>
@@ -620,14 +623,14 @@ const Content = () => {
       <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={() => handleServiceToggle("warp", !(status.warp_enabled || status.warp_active))}
+          onClick={() => handleServiceToggle("warp", !isWarpActive)}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.warpTitle}
             </span>
-            <span style={{ fontSize: "12px", color: (status.warp_enabled || status.warp_active) ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-              {(status.warp_enabled || status.warp_active) ? t.statusActive : t.statusInactive}
+            <span style={{ fontSize: "12px", color: isWarpActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+              {isWarpActive ? t.statusActive : t.statusInactive}
             </span>
           </div>
         </ButtonItem>
