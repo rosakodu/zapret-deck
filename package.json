@@ -12,6 +12,10 @@
     "type": "git",
     "url": "git+https://github.com/rosakodu/zapret-deck.git"
   },
+  "remote-binary": {
+    "nfqws": "https://github.com/bol-van/zapret",
+    "usque": "https://github.com/cnsilva/usque"
+  },
   "keywords": [
     "decky",
     "plugin",
