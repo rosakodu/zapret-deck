@@ -347,7 +347,6 @@ class Plugin:
         except Exception as e:
             logger.error(f"Failed to remove test hostlist: {e}")
 
-        self.autotune_in_progress = False
         self.zapret_manager.stop()
 
         if worked_strategy:
@@ -358,7 +357,12 @@ class Plugin:
             self.zapret_manager.start(worked_strategy, HOSTLIST_FILE)
             logger.info("Autotune complete. Applied working strategy and enabled Zapret Bypass.")
         else:
+            self.settings["zapret_enabled"] = False
+            self.save_settings()
             logger.info("Autotune failed. No working strategy found.")
+
+        # В самом конце сбрасываем флаг подбора, когда служба уже запущена и статус сохранен
+        self.autotune_in_progress = False
 
     @_rpc
     async def update_resources(self) -> dict:
