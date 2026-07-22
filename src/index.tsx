@@ -71,7 +71,7 @@ type TranslationKeys =
 const translations: Record<string, Record<TranslationKeys, string>> = {
   english: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "Zapret Bypass",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "Status",
     statusActive: "Active",
@@ -102,7 +102,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   russian: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "Обход Zapret",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "Состояние",
     statusActive: "Активен",
@@ -133,7 +133,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   ukrainian: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "Обхід Zapret",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "Стан",
     statusActive: "Активний",
@@ -164,7 +164,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   turkish: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "Zapret Atlatma",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "Durum",
     statusActive: "Aktif",
@@ -195,7 +195,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   arabic: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "تخطي Zapret",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "الحالة",
     statusActive: "نشط",
@@ -226,7 +226,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   farsi: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "دور زدن Zapret",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "وضعیت",
     statusActive: "فعال",
@@ -257,7 +257,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   persian: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "دور زدن Zapret",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "وضعیت",
     statusActive: "فعال",
@@ -288,7 +288,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   schinese: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "Zapret 绕过",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "状态",
     statusActive: "已启用",
@@ -319,7 +319,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   },
   tchinese: {
     pluginTitle: "Zapret Deck",
-    zapretTitle: "Zapret 繞過",
+    zapretTitle: "Zapret",
     warpTitle: "WARP",
     statusTitle: "狀態",
     statusActive: "已啟用",
