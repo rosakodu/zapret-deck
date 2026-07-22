@@ -1,5 +1,9 @@
 # 🚀 Zapret Deck
 
+[English](README.md) | [Русский](README.ru.md) | [Українська](README.uk.md) | [Türkçe](README.tr.md) | [العربية](README.ar.md) | [فارسی](README.fa.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+
+---
+
 **Zapret Deck** — это мощный и удобный плагин для **Decky Loader**, предназначенный для обхода блокировок сетевых ресурсов (Discord, YouTube и др.) и интеграции **Cloudflare WARP VPN** прямо в интерфейс **Steam Deck** и устройств под управлением **SteamOS / Bazzite / ChimeraOS**.
 
 ---

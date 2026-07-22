@@ -1,39 +1,43 @@
 # 🚀 Zapret Deck
 
-**Zapret Deck** — это мощный и удобный плагин для **Decky Loader**, предназначенный для обхода блокировок сетевых ресурсов (Discord, YouTube и др.) и интеграции **Cloudflare WARP VPN** прямо в интерфейс **Steam Deck** и устройств под управлением **SteamOS / Bazzite / ChimeraOS**.
+[English](README.md) | [Русский](README.ru.md) | [Українська](README.uk.md) | [Türkçe](README.tr.md) | [العربية](README.ar.md) | [فارسی](README.fa.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 
 ---
 
-## ✨ Основные возможности
-
-- ⚡ **Автоподбор стратегий в 1 клик**: умный алгоритм проверяет блокировки и за секунды выбирает самую эффективную стратегию обхода (например, `ALT`, `FAKE`, `SPLIT`).
-- 🎯 **Удобный выбор стратегий**: визуальный список стратегий с возможностью отмены и ручного переключения.
-- 🛡 **Встроенный Cloudflare WARP VPN**: автоматическая регистрация аккаунта WARP и полноценная маршрутизация всего интернет-трафика (смена IP и обход любых блокировок).
-- 🎨 **Нативный интерфейс Decky Loader**: лаконичный дизайн, гармонично вписанный в системное меню Steam Deck.
-- 🔄 **Автозапуск и сохранность настроек**: служба автоматически восстанавливает работу при включении консоли, перезагрузке и смене игрового/рабочего режима.
-- 🚀 **Высокая скорость и экономия ресурсов**: обход работает на уровне ядра через `nfqws` и `nftables`, практически не нагружая процессор и аккумуляторы Steam Deck.
+**Zapret Deck** is a powerful and easy-to-use plugin for **Decky Loader** designed to bypass network restrictions (Discord, YouTube, etc.) and integrate **Cloudflare WARP VPN** directly into the **Steam Deck** interface and devices running **SteamOS / Bazzite / ChimeraOS**.
 
 ---
 
-## 🛠 Требования
+## ✨ Features
 
-- **Steam Deck** (LCD или OLED) / ПК с **SteamOS 3.x / Bazzite / ChimeraOS / Nobara**.
-- Установленный **[Decky Loader](https://decky.realm3.org/)**.
+- ⚡ **1-Click Strategy Auto-Detection**: Smart testing algorithm checks blocked targets and selects the most effective desync strategy (e.g. `ALT`, `FAKE`, `SPLIT`) in seconds.
+- 🎯 **Easy Strategy Switching**: Interactive strategy list with toggle cancellation and manual selection.
+- 🛡 **Integrated Cloudflare WARP VPN**: Automatic WARP account registration and full-tunnel routing (changes your IP and bypasses all network blocks).
+- 🎨 **Native Decky Loader UI**: Clean, responsive layout seamlessly matching the Steam Deck Quick Access Menu style.
+- 🔄 **Auto-Start & Persistence**: Automatically restores service state after console reboot or switching between Gaming and Desktop modes.
+- 🚀 **High Speed & Low Overhead**: Runs at kernel level via `nfqws` and `nftables`, placing almost zero load on CPU or battery life.
 
 ---
 
-## 📦 Установка
+## 🛠 Requirements
 
-### Вариант 1. Автоматическая установка через Decky Loader (ZIP)
+- **Steam Deck** (LCD or OLED) / PC running **SteamOS 3.x / Bazzite / ChimeraOS / Nobara**.
+- Installed **[Decky Loader](https://decky.realm3.org/)**.
 
-1. Зайдите в **Релизы GitHub (Releases)** проекта и скачайте `zapret-deck.zip` из последнего релиза (`v1.0.0`).
-2. В меню **Decky Loader** перейдите в *Настройки* -> *Разработчик (Developer)*.
-3. Нажмите **Install Plugin from ZIP** и выберите скачанный файл `zapret-deck.zip`.
-4. Перезапустите Decky Loader при необходимости.
+---
 
-### Вариант 2. Ручная установка через Терминал (SSH / Konsole)
+## 📦 Installation
 
-Выполните одну команду в консоли Steam Deck:
+### Option 1. Automatic via Decky Loader (ZIP)
+
+1. Open the **Releases** section on GitHub and download `zapret-deck.zip` from the latest release (`v1.0.0`).
+2. Open **Decky Loader** -> *Settings* -> *Developer*.
+3. Click **Install Plugin from ZIP** and select `zapret-deck.zip`.
+4. Restart Decky Loader if prompted.
+
+### Option 2. Manual via Terminal (SSH / Konsole)
+
+Run this single command on your Steam Deck:
 
 ```bash
 curl -sSL https://github.com/rosakodu/zapret-deck/releases/download/v1.0.0/zapret-deck.zip -o /tmp/zapret-deck.zip && \
@@ -45,29 +49,29 @@ sudo systemctl restart plugin_loader.service
 
 ---
 
-## 🎮 Как использовать
+## 🎮 How to Use
 
-1. Нажмите кнопку **`...` (Quick Access)** на Steam Deck и откройте вкладку **Decky Loader** (значок вилки).
-2. Выберите плагин **Zapret Deck**.
-3. Нажмите кнопку **«Автоподбор стратегии»**:
-   - Плагин проверит соединение с ресурсами и сам подберет рабочую стратегию (`ALT`).
-   - По завершении вы увидите всплывающее уведомление, а надпись **Обход Zapret** станет синей и переключится в **«Активен»**.
-4. При необходимости включения полновесного VPN переключите тумблер **WARP** — плагин автоматически зарегистрирует устройство в сети Cloudflare и сменит ваш IP.
-
----
-
-## 📂 Структура проекта
-
-- `main.py` — главный бэкенд плагина на Python (RPC вызовы, управление настройками).
-- `src/index.tsx` — фронтенд на React и TypeScript для интерфейса Decky Loader.
-- `py_modules/zapret_deck/` — модули управления службами:
-  - `zapret_manager.py` — управление демоном `nfqws` и правилами `nftables`.
-  - `warp_manager.py` — управление клиентом `usque` и маршрутизацией TUN (`warp0`).
-  - `strategies.py` — пресеты проверенных стратегий обхода DPI.
-- `bin/` — скомпилированные утилиты (`nfqws`, `usque`).
+1. Press the **`...` (Quick Access)** button on your Steam Deck and open the **Decky Loader** tab.
+2. Select **Zapret Deck**.
+3. Click **"Auto-detect Strategy"**:
+   - The plugin tests connections and automatically selects a working strategy (`ALT`).
+   - You will see a completion toast, and **Zapret Bypass** will turn blue and display **"Active"**.
+4. If you need a full VPN, toggle **WARP** — the plugin will automatically register with Cloudflare and route your traffic.
 
 ---
 
-## ⚖️ Лицензия
+## 📂 Project Structure
 
-Распространяется под лицензией **BSD-3-Clause**. Подробности в файле LICENSE.
+- `main.py` — Python plugin backend (RPC calls, settings persistence).
+- `src/index.tsx` — React & TypeScript UI for Decky Loader.
+- `py_modules/zapret_deck/`:
+  - `zapret_manager.py` — `nfqws` daemon and `nftables` rule management.
+  - `warp_manager.py` — `usque` client and `warp0` TUN routing management.
+  - `strategies.py` — Preset DPI bypass strategies.
+- `bin/` — Compiled binaries (`nfqws`, `usque`).
+
+---
+
+## ⚖️ License
+
+Distributed under the **BSD-3-Clause** license. See LICENSE for details.
