@@ -24,8 +24,10 @@ class WarpManager:
 
     def _run_cmd(self, cmd: list, timeout: int = 15) -> tuple:
         try:
+            clean_env = os.environ.copy()
+            clean_env.pop("LD_LIBRARY_PATH", None)
             logger.debug(f"Running command: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=clean_env)
             return result.returncode, result.stdout.strip(), result.stderr.strip()
         except Exception as e:
             logger.error(f"Failed to run command {' '.join(cmd)}: {e}")
@@ -71,21 +73,27 @@ class WarpManager:
         
         # Скрипт UP (вызывается при подключении)
         up_content = f"""#!/bin/bash
+unset LD_LIBRARY_PATH
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 logger -t "zapret-deck-warp" "Tunnel interface UP: $USQUE_IFACE, endpoint: $USQUE_ENDPOINT"
+
+# Извлекаем IP ендпоинта без порта (:443)
+ENDPOINT_IP=$(echo "$USQUE_ENDPOINT" | cut -d':' -f1)
 
 # 1. Получаем текущий шлюз по умолчанию и интерфейс
 GW=$(ip route show | grep default | awk '{{print $3}}' | head -n1)
 DEV=$(ip route show | grep default | awk '{{print $5}}' | head -n1)
 
-if [ -n "$GW" ] && [ -n "$DEV" ]; then
-    logger -t "zapret-deck-warp" "Current default gateway: $GW on device $DEV"
-    # Добавляем маршрут до самого сервера WARP через текущий шлюз, чтобы туннель не упал
-    ip route add "$USQUE_ENDPOINT" via "$GW" dev "$DEV" 2>/dev/null || true
+if [ -n "$GW" ] && [ -n "$DEV" ] && [ -n "$ENDPOINT_IP" ]; then
+    logger -t "zapret-deck-warp" "Current default gateway: $GW on device $DEV for endpoint $ENDPOINT_IP"
+    # Добавляем маршрут до самого сервера WARP через физический шлюз
+    ip route add "$ENDPOINT_IP" via "$GW" dev "$DEV" 2>/dev/null || true
 else
-    logger -t "zapret-deck-warp" "Could not find default gateway"
+    logger -t "zapret-deck-warp" "Could not find default gateway or endpoint IP"
 fi
 
-# 2. Перенаправляем весь трафик в TUN-интерфейс с помощью двух маршрутов (def1 трюк)
+# 2. Перенаправляем весь трафик в TUN-интерфейс
 ip route add 0.0.0.0/1 dev "$USQUE_IFACE" 2>/dev/null || true
 ip route add 128.0.0.0/1 dev "$USQUE_IFACE" 2>/dev/null || true
 
@@ -99,10 +107,17 @@ fi
 
         # Скрипт DOWN (вызывается при отключении)
         down_content = f"""#!/bin/bash
+unset LD_LIBRARY_PATH
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 logger -t "zapret-deck-warp" "Tunnel interface DOWN: $USQUE_IFACE"
 
+ENDPOINT_IP=$(echo "$USQUE_ENDPOINT" | cut -d':' -f1)
+
 # 1. Удаляем маршруты
-ip route del "$USQUE_ENDPOINT" 2>/dev/null || true
+if [ -n "$ENDPOINT_IP" ]; then
+    ip route del "$ENDPOINT_IP" 2>/dev/null || true
+fi
 ip route del 0.0.0.0/1 dev "$USQUE_IFACE" 2>/dev/null || true
 ip route del 128.0.0.0/1 dev "$USQUE_IFACE" 2>/dev/null || true
 
@@ -128,7 +143,6 @@ fi
         logger.info("Performing network routing and DNS emergency cleanup...")
         
         # 1. Удаляем маршруты
-        # Находим имя интерфейса в таблице маршрутов
         rc, stdout, _ = self._run_cmd(["ip", "route", "show"])
         for line in stdout.splitlines():
             if self.interface_name in line:
@@ -171,12 +185,15 @@ fi
 
         try:
             logger.info(f"Executing: {' '.join(cmd)}")
+            clean_env = os.environ.copy()
+            clean_env.pop("LD_LIBRARY_PATH", None)
             with open(self.log_file, "a") as log:
                 subprocess.Popen(
                     cmd,
                     stdout=log,
                     stderr=log,
-                    start_new_session=True
+                    start_new_session=True,
+                    env=clean_env
                 )
             
             # Даем туннелю 3 секунды на установление соединения
