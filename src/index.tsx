@@ -495,8 +495,9 @@ const Content = () => {
             setStrategies(strats || []);
             if (!st.autotune_in_progress) {
               clearInterval(pollInterval);
-              // Дополнительное подтверждение статуса через 1с
-              setTimeout(refreshStatus, 1000);
+              // Дополнительное подтверждение статуса через 500мс и 1.5с
+              setTimeout(refreshStatus, 500);
+              setTimeout(refreshStatus, 1500);
             }
           } catch (err) {
             console.error(err);
@@ -523,14 +524,14 @@ const Content = () => {
       <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={() => handleServiceToggle("zapret", !status.zapret_enabled)}
+          onClick={() => handleServiceToggle("zapret", !(status.zapret_enabled || status.zapret_active))}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.zapretTitle}
             </span>
-            <span style={{ fontSize: "12px", color: status.zapret_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-              {status.zapret_enabled ? t.statusActive : t.statusInactive}
+            <span style={{ fontSize: "12px", color: (status.zapret_enabled || status.zapret_active) ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+              {(status.zapret_enabled || status.zapret_active) ? t.statusActive : t.statusInactive}
             </span>
           </div>
         </ButtonItem>
@@ -619,14 +620,14 @@ const Content = () => {
       <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={() => handleServiceToggle("warp", !status.warp_enabled)}
+          onClick={() => handleServiceToggle("warp", !(status.warp_enabled || status.warp_active))}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.warpTitle}
             </span>
-            <span style={{ fontSize: "12px", color: status.warp_enabled ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-              {status.warp_enabled ? t.statusActive : t.statusInactive}
+            <span style={{ fontSize: "12px", color: (status.warp_enabled || status.warp_active) ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+              {(status.warp_enabled || status.warp_active) ? t.statusActive : t.statusInactive}
             </span>
           </div>
         </ButtonItem>
