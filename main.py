@@ -302,6 +302,9 @@ class Plugin:
             logger.error(f"Failed to create test hostlist: {e}")
             test_hostlist = HOSTLIST_FILE
 
+        clean_env = os.environ.copy()
+        clean_env.pop("LD_LIBRARY_PATH", None)
+
         for i, strat in enumerate(DEFAULT_STRATEGIES):
             logger.info(f"Autotune testing: {strat['name']}")
             try:
@@ -309,14 +312,15 @@ class Plugin:
                 self.zapret_manager.start(strat["args"], test_hostlist)
                 await asyncio.sleep(3) # даем nfqws примениться
                 
-                # Тестируем доступность с обязательным флагом -4 (принудительно IPv4, исключая задержки IPv6)
+                # Тестируем доступность с обязательным флагом -4 (принудительно IPv4)
                 success = False
                 for target_url in ["https://www.youtube.com", "https://www.google.com"]:
                     for attempt in range(2):
                         proc = await asyncio.create_subprocess_exec(
                             "/usr/bin/curl", "-4", "-s", "-I", "-k", "--connect-timeout", "4", target_url,
                             stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE
+                            stderr=subprocess.PIPE,
+                            env=clean_env
                         )
                         stdout, stderr = await proc.communicate()
                         

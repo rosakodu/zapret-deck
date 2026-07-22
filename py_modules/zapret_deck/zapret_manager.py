@@ -19,8 +19,10 @@ class ZapretManager:
     def _run_cmd(self, cmd: list) -> tuple:
         """Вспомогательный метод для запуска системных команд"""
         try:
+            clean_env = os.environ.copy()
+            clean_env.pop("LD_LIBRARY_PATH", None)
             logger.debug(f"Running command: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5, env=clean_env)
             return result.returncode, result.stdout.strip(), result.stderr.strip()
         except Exception as e:
             logger.error(f"Failed to run command {' '.join(cmd)}: {e}")
