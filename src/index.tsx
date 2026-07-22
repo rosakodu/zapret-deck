@@ -1,7 +1,5 @@
 import {
   ButtonItem,
-  Dropdown,
-  Field,
   PanelSection,
   PanelSectionRow,
   staticClasses,
@@ -352,17 +350,6 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
   }
 };
 
-const LANGUAGE_OPTIONS = [
-  { label: "English", data: "english" },
-  { label: "Русский", data: "russian" },
-  { label: "Українська", data: "ukrainian" },
-  { label: "Türkçe", data: "turkish" },
-  { label: "العربية", data: "arabic" },
-  { label: "فارسی", data: "persian" },
-  { label: "简体中文", data: "schinese" },
-  { label: "繁體中文", data: "tchinese" },
-];
-
 // Редактор списка сайтов убран
 
 const Content = () => {
@@ -556,9 +543,32 @@ const Content = () => {
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.zapretTitle}
             </span>
-            <span style={{ fontSize: "12px", color: isZapretActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-              {isZapretActive ? t.statusActive : t.statusInactive}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "12px", color: isZapretActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+                {isZapretActive ? t.statusActive : t.statusInactive}
+              </span>
+              <div style={{
+                width: "36px",
+                height: "20px",
+                borderRadius: "10px",
+                backgroundColor: isZapretActive ? "#1a9fff" : "#3a3a3a",
+                position: "relative",
+                transition: "background-color 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                padding: "2px",
+                boxSizing: "border-box"
+              }}>
+                <div style={{
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffffff",
+                  transform: isZapretActive ? "translateX(16px)" : "translateX(0px)",
+                  transition: "transform 0.2s ease"
+                }} />
+              </div>
+            </div>
           </div>
         </ButtonItem>
       </PanelSectionRow>
@@ -652,9 +662,32 @@ const Content = () => {
             <span style={{ fontWeight: "normal", color: "inherit" }}>
               {t.warpTitle}
             </span>
-            <span style={{ fontSize: "12px", color: isWarpActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
-              {isWarpActive ? t.statusActive : t.statusInactive}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "12px", color: isWarpActive ? "#1a9fff" : "#888", fontWeight: "bold" }}>
+                {isWarpActive ? t.statusActive : t.statusInactive}
+              </span>
+              <div style={{
+                width: "36px",
+                height: "20px",
+                borderRadius: "10px",
+                backgroundColor: isWarpActive ? "#1a9fff" : "#3a3a3a",
+                position: "relative",
+                transition: "background-color 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                padding: "2px",
+                boxSizing: "border-box"
+              }}>
+                <div style={{
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffffff",
+                  transform: isWarpActive ? "translateX(16px)" : "translateX(0px)",
+                  transition: "transform 0.2s ease"
+                }} />
+              </div>
+            </div>
           </div>
         </ButtonItem>
       </PanelSectionRow>
@@ -684,23 +717,6 @@ const Content = () => {
         >
           {loadingWarp ? t.generatingWarp : t.generateWarp}
         </ButtonItem>
-      </PanelSectionRow>
-
-      {/* Language Section */}
-      <div style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }}>
-        <span style={{ fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-          {t.language}
-        </span>
-      </div>
-
-      <PanelSectionRow>
-        <Field label={t.language}>
-          <Dropdown
-            selectedOption={lang}
-            onChange={(opt) => setLang(opt.data)}
-            rgOptions={LANGUAGE_OPTIONS}
-          />
-        </Field>
       </PanelSectionRow>
     </PanelSection>
   );
