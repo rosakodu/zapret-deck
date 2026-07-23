@@ -91,6 +91,7 @@ const generateWarp = callable("generate_warp");
 const startAutotune = callable("start_autotune");
 const getSteamLanguage = callable("get_steam_language");
 const updateResources = callable("update_resources");
+const openUrl = callable("open_url");
 const translations = {
     english: {
         pluginTitle: "Zapret Deck",
@@ -122,6 +123,7 @@ const translations = {
         updateResources: "Update Lists & Strategies",
         updating: "Updating...",
         language: "Language",
+        support: "Support",
     },
     russian: {
         pluginTitle: "Zapret Deck",
@@ -153,6 +155,7 @@ const translations = {
         updateResources: "Обновить списки и стратегии",
         updating: "Обновление...",
         language: "Язык",
+        support: "Поддержка",
     },
     ukrainian: {
         pluginTitle: "Zapret Deck",
@@ -184,6 +187,7 @@ const translations = {
         updateResources: "Оновити списки та стратегії",
         updating: "Оновлення...",
         language: "Мова",
+        support: "Підтримка",
     },
     turkish: {
         pluginTitle: "Zapret Deck",
@@ -215,6 +219,7 @@ const translations = {
         updateResources: "Listeleri ve Stratejileri Güncelle",
         updating: "Güncelleniyor...",
         language: "Dil",
+        support: "Destek",
     },
     arabic: {
         pluginTitle: "Zapret Deck",
@@ -246,6 +251,7 @@ const translations = {
         updateResources: "تحديث القوائم والاستراتيجيات",
         updating: "جاري التحديث...",
         language: "اللغة",
+        support: "الدعم",
     },
     farsi: {
         pluginTitle: "Zapret Deck",
@@ -277,6 +283,7 @@ const translations = {
         updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
         updating: "در حال بروزرسانی...",
         language: "زبان",
+        support: "پشتیبانی",
     },
     persian: {
         pluginTitle: "Zapret Deck",
@@ -308,6 +315,7 @@ const translations = {
         updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
         updating: "در حال بروزرسانی...",
         language: "زبان",
+        support: "پشتیبانی",
     },
     schinese: {
         pluginTitle: "Zapret Deck",
@@ -339,6 +347,7 @@ const translations = {
         updateResources: "更新域名列表与策略",
         updating: "更新中...",
         language: "语言",
+        support: "支持",
     },
     tchinese: {
         pluginTitle: "Zapret Deck",
@@ -370,6 +379,7 @@ const translations = {
         updateResources: "更新網網域名稱列表與策略",
         updating: "更新中...",
         language: "語言",
+        support: "支援",
     }
 };
 // Редактор списка сайтов убран
@@ -546,6 +556,29 @@ const Content = () => {
             console.error(e);
         }
     };
+    const handleOpenSupport = async () => {
+        const url = "https://vk.ru/valvesteamdeck";
+        try {
+            if (typeof DFL.Navigation !== "undefined" && DFL.Navigation?.NavigateToExternalWeb) {
+                DFL.Navigation.NavigateToExternalWeb(url);
+            }
+            else if (typeof window !== "undefined" && window.SteamClient?.System?.OpenInSystemBrowser) {
+                window.SteamClient.System.OpenInSystemBrowser(url);
+            }
+            else {
+                await openUrl(url);
+            }
+        }
+        catch (e) {
+            console.error("Failed to open support URL:", e);
+            try {
+                await openUrl(url);
+            }
+            catch (err) {
+                console.error(err);
+            }
+        }
+    };
     if (!status) {
         return SP_JSX.jsx(DFL.PanelSection, { children: SP_JSX.jsx(DFL.PanelSectionRow, { children: "Loading..." }) });
     }
@@ -600,7 +633,7 @@ const Content = () => {
                                         backgroundColor: "#ffffff",
                                         transform: isWarpActive ? "translateX(16px)" : "translateX(0px)",
                                         transition: "transform 0.2s ease"
-                                    } }) })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) })] }));
+                                    } }) })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleOpenSupport, children: t.support }) })] }));
 };
 var index = definePlugin(() => {
     return {

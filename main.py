@@ -419,3 +419,18 @@ class Plugin:
             self.zapret_manager.start(strategy, HOSTLIST_FILE)
             
         return {"success": True, "updated_lists": updated_count}
+
+    @_rpc
+    async def open_url(self, url: str) -> dict:
+        """Открывает веб-страницу в браузере"""
+        logger.info(f"Opening URL in browser: {url}")
+        try:
+            import subprocess
+            clean_env = os.environ.copy()
+            clean_env.pop("LD_LIBRARY_PATH", None)
+            subprocess.Popen(["xdg-open", url], env=clean_env)
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Failed to open URL {url}: {e}")
+            return {"success": False, "error": str(e)}
+

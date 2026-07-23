@@ -1,5 +1,6 @@
 import {
   ButtonItem,
+  Navigation,
   PanelSection,
   PanelSectionRow,
   staticClasses,
@@ -36,6 +37,7 @@ const generateWarp = callable<[], { success: boolean }>("generate_warp");
 const startAutotune = callable<[], { success: boolean; error?: string }>("start_autotune");
 const getSteamLanguage = callable<[], string>("get_steam_language");
 const updateResources = callable<[], { success: boolean; updated_lists: number }>("update_resources");
+const openUrl = callable<[string], { success: boolean }>("open_url");
 
 type TranslationKeys =
   | "pluginTitle"
@@ -66,7 +68,8 @@ type TranslationKeys =
   | "appliedStrategy"
   | "updateResources"
   | "updating"
-  | "language";
+  | "language"
+  | "support";
 
 const translations: Record<string, Record<TranslationKeys, string>> = {
   english: {
@@ -99,6 +102,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "Update Lists & Strategies",
     updating: "Updating...",
     language: "Language",
+    support: "Support",
   },
   russian: {
     pluginTitle: "Zapret Deck",
@@ -130,6 +134,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "Обновить списки и стратегии",
     updating: "Обновление...",
     language: "Язык",
+    support: "Поддержка",
   },
   ukrainian: {
     pluginTitle: "Zapret Deck",
@@ -161,6 +166,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "Оновити списки та стратегії",
     updating: "Оновлення...",
     language: "Мова",
+    support: "Підтримка",
   },
   turkish: {
     pluginTitle: "Zapret Deck",
@@ -192,6 +198,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "Listeleri ve Stratejileri Güncelle",
     updating: "Güncelleniyor...",
     language: "Dil",
+    support: "Destek",
   },
   arabic: {
     pluginTitle: "Zapret Deck",
@@ -223,6 +230,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "تحديث القوائم والاستراتيجيات",
     updating: "جاري التحديث...",
     language: "اللغة",
+    support: "الدعم",
   },
   farsi: {
     pluginTitle: "Zapret Deck",
@@ -254,6 +262,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
     updating: "در حال بروزرسانی...",
     language: "زبان",
+    support: "پشتیبانی",
   },
   persian: {
     pluginTitle: "Zapret Deck",
@@ -285,6 +294,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "بروزرسانی لیست‌ها و استراتژی‌ها",
     updating: "در حال بروزرسانی...",
     language: "زبان",
+    support: "پشتیبانی",
   },
   schinese: {
     pluginTitle: "Zapret Deck",
@@ -316,6 +326,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "更新域名列表与策略",
     updating: "更新中...",
     language: "语言",
+    support: "支持",
   },
   tchinese: {
     pluginTitle: "Zapret Deck",
@@ -347,6 +358,7 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updateResources: "更新網網域名稱列表與策略",
     updating: "更新中...",
     language: "語言",
+    support: "支援",
   }
 };
 
@@ -521,6 +533,26 @@ const Content = () => {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleOpenSupport = async () => {
+    const url = "https://vk.ru/valvesteamdeck";
+    try {
+      if (typeof Navigation !== "undefined" && Navigation?.NavigateToExternalWeb) {
+        Navigation.NavigateToExternalWeb(url);
+      } else if (typeof window !== "undefined" && (window as any).SteamClient?.System?.OpenInSystemBrowser) {
+        (window as any).SteamClient.System.OpenInSystemBrowser(url);
+      } else {
+        await openUrl(url);
+      }
+    } catch (e) {
+      console.error("Failed to open support URL:", e);
+      try {
+        await openUrl(url);
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -706,6 +738,15 @@ const Content = () => {
           disabled={loadingWarp}
         >
           {loadingWarp ? t.generatingWarp : t.generateWarp}
+        </ButtonItem>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleOpenSupport}
+        >
+          {t.support}
         </ButtonItem>
       </PanelSectionRow>
     </PanelSection>
