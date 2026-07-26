@@ -371,6 +371,7 @@ const Content = () => {
   const [loadingWarp, setLoadingWarp] = useState<boolean>(false);
   const [updatingResources, setUpdatingResources] = useState<boolean>(false);
   const [strategiesExpanded, setStrategiesExpanded] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<boolean>(false);
 
   const t = useMemo(() => {
     return translations[lang] || translations.english;
@@ -379,11 +380,15 @@ const Content = () => {
   const refreshStatus = useCallback(async () => {
     try {
       const res = await getStatus();
-      setStatus(res);
-      const strats = await getStrategies();
-      setStrategies(strats || []);
+      if (res) {
+        setStatus(res);
+        setLoadError(false);
+        const strats = await getStrategies();
+        setStrategies(strats || []);
+      }
     } catch (e) {
       console.error("Failed to get status", e);
+      setLoadError(true);
     }
   }, []);
 
@@ -555,6 +560,23 @@ const Content = () => {
       }
     }
   };
+
+  if (loadError && !status) {
+    return (
+      <PanelSection>
+        <PanelSectionRow>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "12px 0", gap: "8px" }}>
+            <span style={{ fontSize: "12px", color: "#ff4d4f", textAlign: "center" }}>
+              {t.error}: Не удалось подключиться к бэкенду
+            </span>
+            <ButtonItem layout="below" onClick={refreshStatus}>
+              Повторить попытку
+            </ButtonItem>
+          </div>
+        </PanelSectionRow>
+      </PanelSection>
+    );
+  }
 
   if (!status) {
     return <PanelSection><PanelSectionRow>Loading...</PanelSectionRow></PanelSection>;

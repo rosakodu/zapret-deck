@@ -390,18 +390,23 @@ const Content = () => {
     const [loadingWarp, setLoadingWarp] = SP_REACT.useState(false);
     const [updatingResources, setUpdatingResources] = SP_REACT.useState(false);
     const [strategiesExpanded, setStrategiesExpanded] = SP_REACT.useState(false);
+    const [loadError, setLoadError] = SP_REACT.useState(false);
     const t = SP_REACT.useMemo(() => {
         return translations[lang] || translations.english;
     }, [lang]);
     const refreshStatus = SP_REACT.useCallback(async () => {
         try {
             const res = await getStatus();
-            setStatus(res);
-            const strats = await getStrategies();
-            setStrategies(strats || []);
+            if (res) {
+                setStatus(res);
+                setLoadError(false);
+                const strats = await getStrategies();
+                setStrategies(strats || []);
+            }
         }
         catch (e) {
             console.error("Failed to get status", e);
+            setLoadError(true);
         }
     }, []);
     const prevInProgress = SP_REACT.useRef(false);
@@ -579,6 +584,9 @@ const Content = () => {
             }
         }
     };
+    if (loadError && !status) {
+        return (SP_JSX.jsx(DFL.PanelSection, { children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "12px 0", gap: "8px" }, children: [SP_JSX.jsxs("span", { style: { fontSize: "12px", color: "#ff4d4f", textAlign: "center" }, children: [t.error, ": \u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F \u043A \u0431\u044D\u043A\u0435\u043D\u0434\u0443"] }), SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: refreshStatus, children: "\u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u043F\u043E\u043F\u044B\u0442\u043A\u0443" })] }) }) }));
+    }
     if (!status) {
         return SP_JSX.jsx(DFL.PanelSection, { children: SP_JSX.jsx(DFL.PanelSectionRow, { children: "Loading..." }) });
     }
