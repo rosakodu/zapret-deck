@@ -14,3 +14,22 @@ A Decky Loader plugin for Steam Deck that allows you to bypass DPI blocks (YouTu
 - **Native Decky Loader UI**: Clean, responsive layout seamlessly matching the Steam Deck Quick Access Menu style.
 - **Auto-Start & Persistence**: Automatically restores service state after console reboot or switching between Gaming and Desktop modes.
 - **High Speed & Low Overhead**: Runs at kernel level via `nfqws` and `nftables`, placing almost zero load on CPU or battery life.
+
+## 📥 Installation
+
+1. Download the latest release (`zapret-deck.zip`) from [Releases](https://github.com/rosakodu/zapret-deck/releases) or build it manually.
+2. Copy the ZIP file to your Steam Deck.
+3. Enable **Developer Mode** in Steam Settings, then in Decky Loader settings, enable **Developer mode** and choose "Install plugin from file".
+
+## 🚀 How to Use
+
+1. Press the **`...` (Quick Access)** button on your Steam Deck and open the **Decky Loader** tab.
+2. Select **Zapret Deck**.
+3. Click **"Auto-detect Strategy"**:
+   - The plugin tests connections and automatically selects a working strategy (e.g. `ALT`).
+   - The **Zapret** toggle will activate.
+4. If you need a full VPN, turn on the **WARP** toggle — the plugin will automatically register and route your traffic through Cloudflare WARP.
+
+## ⚖️ License
+
+BSD-3-Clause License.
