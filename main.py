@@ -230,20 +230,35 @@ class Plugin:
 
     @_rpc
     async def generate_warp(self) -> dict:
-        """Регистрирует новый аккаунт WARP"""
-        # Если zapret выключен, временно активируем его для связи с api.cloudflareclient.com в обход блокировок РКН
+        """Регистрирует новый аккаунт WARP с автоподбором подходящей стратегии обхода"""
         zapret_was_active = self.zapret_manager.is_running()
-        if not zapret_was_active:
+        active_strategy = self.settings.get("current_strategy")
+        
+        # Составляем список стратегий для попыток регистрации
+        strats_to_try = []
+        if active_strategy:
+            strats_to_try.append(active_strategy)
+        for s in DEFAULT_STRATEGIES:
+            if s["args"] not in strats_to_try:
+                strats_to_try.append(s["args"])
+
+        success = False
+        for strat_args in strats_to_try:
             try:
-                strategy = self.settings.get("current_strategy") or DEFAULT_STRATEGIES[0]["args"]
-                self.zapret_manager.start(strategy, HOSTLIST_FILE)
+                decky.logger.info("Attempting WARP registration with strategy...")
+                self.zapret_manager.start(strat_args, HOSTLIST_FILE)
                 await asyncio.sleep(2)
+                if self.warp_manager.register():
+                    success = True
+                    decky.logger.info("WARP registration succeeded!")
+                    break
             except Exception as e:
-                logger.error(f"Failed to start temporary zapret for WARP reg: {e}")
+                decky.logger.error(f"Failed WARP reg attempt: {e}")
 
-        success = self.warp_manager.register()
-
-        if not zapret_was_active:
+        # Восстанавливаем первоначальное состояние zapret
+        if zapret_was_active and active_strategy:
+            self.zapret_manager.start(active_strategy, HOSTLIST_FILE)
+        elif not zapret_was_active:
             self.zapret_manager.stop()
 
         return {"success": success}
