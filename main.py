@@ -21,9 +21,11 @@ from zapret_deck.strategies import DEFAULT_STRATEGIES
 # Путь к директории плагина
 plugin_dir = os.path.dirname(os.path.abspath(__file__))
 
-SETTINGS_DIR = os.path.join(os.path.expanduser("~"), ".config", "zapret-deck")
+USER_HOME = "/home/deck" if os.path.isdir("/home/deck") else os.path.expanduser("~")
+SETTINGS_DIR = os.path.join(USER_HOME, ".config", "zapret-deck")
 SETTINGS_FILE = os.path.join(SETTINGS_DIR, "settings.json")
 HOSTLIST_FILE = os.path.join(SETTINGS_DIR, "hostlist.txt")
+CUSTOM_STRATEGIES_FILE = os.path.join(SETTINGS_DIR, "custom_strategies.json")
 
 def _rpc(func):
     @functools.wraps(func)
@@ -53,9 +55,47 @@ class Plugin:
                     f.write("")
             except Exception as e:
                 logger.error(f"Failed to create default empty hostlist: {e}")
+
+        # Гарантируем наличие файла пользовательских стратегий на старте
+        if not os.path.exists(CUSTOM_STRATEGIES_FILE):
+            try:
+                with open(CUSTOM_STRATEGIES_FILE, "w", encoding="utf-8") as f:
+                    json.dump([], f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                logger.error(f"Failed to create default custom_strategies.json: {e}")
+
+        # Обеспечиваем права доступа пользователю deck в Desktop Mode
+        if os.path.isdir("/home/deck"):
+            try:
+                import shutil
+                shutil.chown(SETTINGS_DIR, user="deck", group="deck")
+                if os.path.exists(HOSTLIST_FILE):
+                    shutil.chown(HOSTLIST_FILE, user="deck", group="deck")
+                if os.path.exists(CUSTOM_STRATEGIES_FILE):
+                    shutil.chown(CUSTOM_STRATEGIES_FILE, user="deck", group="deck")
+            except Exception:
+                pass
         
         self.zapret_manager = ZapretManager(plugin_dir)
         self.warp_manager = WarpManager(plugin_dir, SETTINGS_DIR)
+
+    def get_all_strategies(self) -> list:
+        """Возвращает список стандартных и пользовательских стратегий"""
+        strategies = list(DEFAULT_STRATEGIES)
+        if os.path.isfile(CUSTOM_STRATEGIES_FILE):
+            try:
+                with open(CUSTOM_STRATEGIES_FILE, "r", encoding="utf-8") as f:
+                    custom = json.load(f)
+                    if isinstance(custom, list):
+                        for item in custom:
+                            if isinstance(item, dict) and "name" in item and "args" in item:
+                                strategies.append({
+                                    "name": f"{item['name']} [User]",
+                                    "args": item["args"]
+                                })
+            except Exception as e:
+                decky.logger.error(f"Failed to load custom strategies: {e}")
+        return strategies
 
     def load_settings(self):
         if os.path.exists(SETTINGS_FILE):
@@ -117,7 +157,7 @@ class Plugin:
         """Возвращает статус плагина"""
         current_args = self.settings.get("current_strategy", "")
         current_name = ""
-        for s in DEFAULT_STRATEGIES:
+        for s in self.get_all_strategies():
             if s["args"] == current_args:
                 current_name = s["name"]
                 break
@@ -195,10 +235,11 @@ class Plugin:
     @_rpc
     async def get_strategies(self) -> list:
         """Возвращает список доступных стратегий с отметкой автоподбора"""
+        all_strats = self.get_all_strategies()
         autotuned_name = self.settings.get("autotuned_strategy_name")
         if autotuned_name:
             updated_strats = []
-            for s in DEFAULT_STRATEGIES:
+            for s in all_strats:
                 if s["name"] == autotuned_name:
                     updated_strats.append({
                         "name": f"{s['name']} (Auto)",
@@ -207,7 +248,7 @@ class Plugin:
                 else:
                     updated_strats.append(s)
             return updated_strats
-        return DEFAULT_STRATEGIES
+        return all_strats
 
     @_rpc
     async def apply_strategy(self, strategy_args: str) -> dict:
@@ -238,7 +279,7 @@ class Plugin:
         strats_to_try = []
         if active_strategy:
             strats_to_try.append(active_strategy)
-        for s in DEFAULT_STRATEGIES:
+        for s in self.get_all_strategies():
             if s["args"] not in strats_to_try:
                 strats_to_try.append(s["args"])
 
@@ -320,7 +361,7 @@ class Plugin:
         clean_env = os.environ.copy()
         clean_env.pop("LD_LIBRARY_PATH", None)
 
-        for i, strat in enumerate(DEFAULT_STRATEGIES):
+        for i, strat in enumerate(self.get_all_strategies()):
             logger.info(f"Autotune testing: {strat['name']}")
             try:
                 # Запускаем nfqws с этой стратегией и тестовым хостлистом
