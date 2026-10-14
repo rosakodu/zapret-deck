@@ -11,6 +11,7 @@ A Decky Loader plugin for Steam Deck that allows you to bypass DPI blocks (YouTu
 - **1-Click Strategy Auto-Detection**: Smart testing algorithm checks blocked targets and selects the most effective desync strategy (e.g. `ALT`, `FAKE`, `SPLIT`) in seconds.
 - **Easy Strategy Switching**: Interactive strategy list with toggle cancellation and manual selection.
 - **Integrated Cloudflare WARP VPN**: Automatic WARP account registration and full-tunnel routing (changes your IP and bypasses all network blocks).
+- **Desktop Mode System Tray Companion**: Native KDE Plasma system tray widget (StatusNotifierItem & DBusMenu) supporting 1-click toggling of Zapret & WARP, strategy selection, and auto-tuning directly on Desktop Mode without launching Steam.
 - **Native Decky Loader UI**: Clean, responsive layout seamlessly matching the Steam Deck Quick Access Menu style.
 - **Auto-Start & Persistence**: Automatically restores service state after console reboot or switching between Gaming and Desktop modes.
 - **High Speed & Low Overhead**: Runs at kernel level via `nfqws` and `nftables`, placing almost zero load on CPU or battery life.

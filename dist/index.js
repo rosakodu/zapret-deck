@@ -92,6 +92,8 @@ const startAutotune = callable("start_autotune");
 const getSteamLanguage = callable("get_steam_language");
 const updateResources = callable("update_resources");
 const openUrl = callable("open_url");
+const getDesktopTrayStatus = callable("get_desktop_tray_status");
+const setDesktopTrayEnabled = callable("set_desktop_tray_enabled");
 const translations = {
     english: {
         pluginTitle: "Zapret Deck",
@@ -124,6 +126,9 @@ const translations = {
         updating: "Updating...",
         language: "Language",
         support: "Support",
+        desktopTitle: "Desktop Mode",
+        desktopTray: "System Tray Companion",
+        desktopTrayDesc: "Auto-start tray icon to manage Zapret and WARP in Desktop Mode without opening Steam",
     },
     russian: {
         pluginTitle: "Zapret Deck",
@@ -156,6 +161,9 @@ const translations = {
         updating: "Обновление...",
         language: "Язык",
         support: "Поддержка",
+        desktopTitle: "Режим рабочего стола",
+        desktopTray: "Иконка в системном трее",
+        desktopTrayDesc: "Автозапуск трея для управления Zapret и WARP на рабочем столе без открытия Steam",
     },
     ukrainian: {
         pluginTitle: "Zapret Deck",
@@ -188,6 +196,9 @@ const translations = {
         updating: "Оновлення...",
         language: "Мова",
         support: "Підтримка",
+        desktopTitle: "Режим робочого столу",
+        desktopTray: "Іконка в системному треї",
+        desktopTrayDesc: "Автозапуск трею для керування Zapret та WARP на робочому столі без відкриття Steam",
     },
     turkish: {
         pluginTitle: "Zapret Deck",
@@ -220,6 +231,9 @@ const translations = {
         updating: "Güncelleniyor...",
         language: "Dil",
         support: "Destek",
+        desktopTitle: "Masaüstü Modu",
+        desktopTray: "Sistem Tepsisi Simgesi",
+        desktopTrayDesc: "Steam'i açmadan masaüstü modunda Zapret ve WARP'ı yönetmek için tepsi simgesini otomatik başlat",
     },
     arabic: {
         pluginTitle: "Zapret Deck",
@@ -252,6 +266,9 @@ const translations = {
         updating: "جاري التحديث...",
         language: "اللغة",
         support: "الدعم",
+        desktopTitle: "وضع سطح المكتب",
+        desktopTray: "أيقونة شريط المهام",
+        desktopTrayDesc: "بدء تشغيل أيقونة شريط المهام تلقائيًا لإدارة Zapret و WARP في وضع سطح المكتب بدون فتح Steam",
     },
     farsi: {
         pluginTitle: "Zapret Deck",
@@ -284,6 +301,9 @@ const translations = {
         updating: "در حال بروزرسانی...",
         language: "زبان",
         support: "پشتیبانی",
+        desktopTitle: "حالت دسکتاپ",
+        desktopTray: "آیکون سیستم تری",
+        desktopTrayDesc: "راه‌اندازی خودکار آیکون تری برای مدیریت Zapret و WARP در حالت دسکتاپ بدون باز کردن Steam",
     },
     persian: {
         pluginTitle: "Zapret Deck",
@@ -316,6 +336,9 @@ const translations = {
         updating: "در حال بروزرسانی...",
         language: "زبان",
         support: "پشتیبانی",
+        desktopTitle: "حالت دسکتاپ",
+        desktopTray: "آیکون سیستم تری",
+        desktopTrayDesc: "راه‌اندازی خودکار آیکون تری برای مدیریت Zapret و WARP در حالت دسکتاپ بدون باز کردن Steam",
     },
     schinese: {
         pluginTitle: "Zapret Deck",
@@ -348,6 +371,9 @@ const translations = {
         updating: "更新中...",
         language: "语言",
         support: "支持",
+        desktopTitle: "桌面模式",
+        desktopTray: "系统托盘图标",
+        desktopTrayDesc: "在桌面模式下自动启动托盘图标以管理 Zapret 和 WARP，无需打开 Steam",
     },
     tchinese: {
         pluginTitle: "Zapret Deck",
@@ -380,6 +406,9 @@ const translations = {
         updating: "更新中...",
         language: "語言",
         support: "支援",
+        desktopTitle: "桌面模式",
+        desktopTray: "系統匣圖示",
+        desktopTrayDesc: "在桌面模式下自動啟動系統匣圖示以管理 Zapret 和 WARP，無需開啟 Steam",
     }
 };
 // Редактор списка сайтов убран
@@ -391,6 +420,7 @@ const Content = () => {
     const [updatingResources, setUpdatingResources] = SP_REACT.useState(false);
     const [strategiesExpanded, setStrategiesExpanded] = SP_REACT.useState(false);
     const [loadError, setLoadError] = SP_REACT.useState(false);
+    const [trayEnabled, setTrayEnabled] = SP_REACT.useState(true);
     const t = SP_REACT.useMemo(() => {
         return translations[lang] || translations.english;
     }, [lang]);
@@ -435,8 +465,24 @@ const Content = () => {
         refreshStatus();
         const interval = setInterval(refreshStatus, 3000);
         getSteamLanguage().then((l) => setLang(l || "english")).catch(() => setLang("english"));
+        getDesktopTrayStatus()
+            .then((res) => {
+            if (res && typeof res.enabled === "boolean") {
+                setTrayEnabled(res.enabled);
+            }
+        })
+            .catch(() => { });
         return () => clearInterval(interval);
     }, [refreshStatus]);
+    const handleToggleTray = async (enable) => {
+        setTrayEnabled(enable);
+        try {
+            await setDesktopTrayEnabled(enable);
+        }
+        catch (err) {
+            console.error("Failed to toggle desktop tray:", err);
+        }
+    };
     const handleServiceToggle = async (service, enabled) => {
         try {
             const res = await setServiceState(service, enabled);
@@ -641,7 +687,7 @@ const Content = () => {
                                         backgroundColor: "#ffffff",
                                         transform: isWarpActive ? "translateX(16px)" : "translateX(0px)",
                                         transition: "transform 0.2s ease"
-                                    } }) })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleOpenSupport, children: t.support }) })] }));
+                                    } }) })] }) }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.warpSettings }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", children: SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }, children: [SP_JSX.jsx("span", { children: t.warpStatus }), SP_JSX.jsx("span", { style: { color: status.warp_registered ? "#4caf50" : "#ff9800", fontWeight: "bold", fontSize: "12px" }, children: status.warp_registered ? t.warpRegistered : t.warpNotRegistered })] }) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleGenerateWarp, disabled: loadingWarp, children: loadingWarp ? t.generatingWarp : t.generateWarp }) }), SP_JSX.jsx("div", { style: { display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }, children: SP_JSX.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }, children: t.desktopTitle }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: t.desktopTray, description: t.desktopTrayDesc, checked: trayEnabled, onChange: handleToggleTray }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleOpenSupport, children: t.support }) })] }));
 };
 var index = definePlugin(() => {
     return {

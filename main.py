@@ -8,6 +8,14 @@ import functools
 import re
 import traceback as _traceback
 
+# Путь к директории плагина
+plugin_dir = os.path.dirname(os.path.abspath(__file__))
+py_modules_dir = os.path.join(plugin_dir, "py_modules")
+if plugin_dir not in sys.path:
+    sys.path.insert(0, plugin_dir)
+if py_modules_dir not in sys.path:
+    sys.path.insert(0, py_modules_dir)
+
 import decky
 
 # Инициализация логгера
@@ -17,9 +25,13 @@ logger = logging.getLogger("zapret-deck")
 from zapret_deck.zapret_manager import ZapretManager
 from zapret_deck.warp_manager import WarpManager
 from zapret_deck.strategies import DEFAULT_STRATEGIES
-
-# Путь к директории плагина
-plugin_dir = os.path.dirname(os.path.abspath(__file__))
+from zapret_deck.server import ZapretDeckApiServer
+from tray.desktop_integration import (
+    set_autostart,
+    get_desktop_integration_status,
+    launch_tray_process,
+    kill_tray_process,
+)
 
 USER_HOME = "/home/deck" if os.path.isdir("/home/deck") else os.path.expanduser("~")
 SETTINGS_DIR = os.path.join(USER_HOME, ".config", "zapret-deck")
@@ -42,6 +54,8 @@ def _rpc(func):
 
 class Plugin:
     def __init__(self):
+        self.plugin_dir = plugin_dir
+        self.api_server = None
         self.settings = {"zapret_enabled": False, "warp_enabled": False, "current_strategy": DEFAULT_STRATEGIES[0]["args"]}
         self.autotune_in_progress = False
         
@@ -132,8 +146,31 @@ class Plugin:
             decky.logger.info("Restoring WARP Bypass on startup")
             self.warp_manager.start()
 
+        # Запускаем локальный IPC API сервер для системного трея в режиме рабочего стола
+        self.api_server = ZapretDeckApiServer(self, logger=decky.logger)
+        await self.api_server.start()
+
+        # Автозапуск системного трея на рабочем столе (включен по умолчанию)
+        tray_enabled = self.settings.get("desktop_tray_enabled", True)
+        if "desktop_tray_enabled" not in self.settings:
+            self.settings["desktop_tray_enabled"] = True
+            self.save_settings()
+
+        if tray_enabled:
+            loop = asyncio.get_running_loop()
+            try:
+                await loop.run_in_executor(None, set_autostart, self.plugin_dir, True)
+                await loop.run_in_executor(None, launch_tray_process, self.plugin_dir)
+            except Exception as e:
+                decky.logger.error(f"Failed to start desktop tray: {e}")
+
     async def _unload(self):
         decky.logger.info("Zapret-Deck plugin unloading")
+        if self.api_server:
+            try:
+                await self.api_server.stop()
+            except Exception as e:
+                decky.logger.error(f"Error stopping API server: {e}")
         self.zapret_manager.stop()
         self.warp_manager.stop()
         # Полностью удаляем правила nftables при выгрузке, сохраняя статус enabled в конфиге
@@ -141,6 +178,16 @@ class Plugin:
 
     async def _uninstall(self):
         decky.logger.info("Zapret-Deck plugin uninstalling")
+        if self.api_server:
+            try:
+                await self.api_server.stop()
+            except Exception:
+                pass
+        try:
+            set_autostart(self.plugin_dir, False)
+            kill_tray_process()
+        except Exception:
+            pass
         self.zapret_manager.stop()
         self.warp_manager.stop()
         try:
@@ -489,4 +536,26 @@ class Plugin:
         except Exception as e:
             logger.error(f"Failed to open URL {url}: {e}")
             return {"success": False, "error": str(e)}
+
+    @_rpc
+    async def get_desktop_tray_status(self) -> dict:
+        """Возвращает статус интеграции с системным треем рабочего стола"""
+        enabled = self.settings.get("desktop_tray_enabled", True)
+        status = get_desktop_integration_status(self.plugin_dir)
+        return {"enabled": enabled, "autostart": status.get("autostart", False)}
+
+    @_rpc
+    async def set_desktop_tray_enabled(self, enable: bool) -> dict:
+        """Переключает статус интеграции с системным треем и автозапуск"""
+        self.settings["desktop_tray_enabled"] = enable
+        self.save_settings()
+        loop = asyncio.get_running_loop()
+        if enable:
+            await loop.run_in_executor(None, set_autostart, self.plugin_dir, True)
+            await loop.run_in_executor(None, launch_tray_process, self.plugin_dir)
+        else:
+            await loop.run_in_executor(None, set_autostart, self.plugin_dir, False)
+            await loop.run_in_executor(None, kill_tray_process)
+        return {"success": True, "enabled": enable}
+
 

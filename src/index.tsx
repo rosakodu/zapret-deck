@@ -3,6 +3,7 @@ import {
   Navigation,
   PanelSection,
   PanelSectionRow,
+  ToggleField,
   staticClasses,
 } from "@decky/ui";
 import {
@@ -38,6 +39,8 @@ const startAutotune = callable<[], { success: boolean; error?: string }>("start_
 const getSteamLanguage = callable<[], string>("get_steam_language");
 const updateResources = callable<[], { success: boolean; updated_lists: number }>("update_resources");
 const openUrl = callable<[string], { success: boolean }>("open_url");
+const getDesktopTrayStatus = callable<[], { enabled: boolean; autostart: boolean }>("get_desktop_tray_status");
+const setDesktopTrayEnabled = callable<[boolean], { success: boolean; enabled: boolean }>("set_desktop_tray_enabled");
 
 type TranslationKeys =
   | "pluginTitle"
@@ -69,7 +72,10 @@ type TranslationKeys =
   | "updateResources"
   | "updating"
   | "language"
-  | "support";
+  | "support"
+  | "desktopTitle"
+  | "desktopTray"
+  | "desktopTrayDesc";
 
 const translations: Record<string, Record<TranslationKeys, string>> = {
   english: {
@@ -103,6 +109,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "Updating...",
     language: "Language",
     support: "Support",
+    desktopTitle: "Desktop Mode",
+    desktopTray: "System Tray Companion",
+    desktopTrayDesc: "Auto-start tray icon to manage Zapret and WARP in Desktop Mode without opening Steam",
   },
   russian: {
     pluginTitle: "Zapret Deck",
@@ -135,6 +144,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "Обновление...",
     language: "Язык",
     support: "Поддержка",
+    desktopTitle: "Режим рабочего стола",
+    desktopTray: "Иконка в системном трее",
+    desktopTrayDesc: "Автозапуск трея для управления Zapret и WARP на рабочем столе без открытия Steam",
   },
   ukrainian: {
     pluginTitle: "Zapret Deck",
@@ -167,6 +179,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "Оновлення...",
     language: "Мова",
     support: "Підтримка",
+    desktopTitle: "Режим робочого столу",
+    desktopTray: "Іконка в системному треї",
+    desktopTrayDesc: "Автозапуск трею для керування Zapret та WARP на робочому столі без відкриття Steam",
   },
   turkish: {
     pluginTitle: "Zapret Deck",
@@ -199,6 +214,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "Güncelleniyor...",
     language: "Dil",
     support: "Destek",
+    desktopTitle: "Masaüstü Modu",
+    desktopTray: "Sistem Tepsisi Simgesi",
+    desktopTrayDesc: "Steam'i açmadan masaüstü modunda Zapret ve WARP'ı yönetmek için tepsi simgesini otomatik başlat",
   },
   arabic: {
     pluginTitle: "Zapret Deck",
@@ -231,6 +249,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "جاري التحديث...",
     language: "اللغة",
     support: "الدعم",
+    desktopTitle: "وضع سطح المكتب",
+    desktopTray: "أيقونة شريط المهام",
+    desktopTrayDesc: "بدء تشغيل أيقونة شريط المهام تلقائيًا لإدارة Zapret و WARP في وضع سطح المكتب بدون فتح Steam",
   },
   farsi: {
     pluginTitle: "Zapret Deck",
@@ -263,6 +284,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "در حال بروزرسانی...",
     language: "زبان",
     support: "پشتیبانی",
+    desktopTitle: "حالت دسکتاپ",
+    desktopTray: "آیکون سیستم تری",
+    desktopTrayDesc: "راه‌اندازی خودکار آیکون تری برای مدیریت Zapret و WARP در حالت دسکتاپ بدون باز کردن Steam",
   },
   persian: {
     pluginTitle: "Zapret Deck",
@@ -295,6 +319,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "در حال بروزرسانی...",
     language: "زبان",
     support: "پشتیبانی",
+    desktopTitle: "حالت دسکتاپ",
+    desktopTray: "آیکون سیستم تری",
+    desktopTrayDesc: "راه‌اندازی خودکار آیکون تری برای مدیریت Zapret و WARP در حالت دسکتاپ بدون باز کردن Steam",
   },
   schinese: {
     pluginTitle: "Zapret Deck",
@@ -327,6 +354,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "更新中...",
     language: "语言",
     support: "支持",
+    desktopTitle: "桌面模式",
+    desktopTray: "系统托盘图标",
+    desktopTrayDesc: "在桌面模式下自动启动托盘图标以管理 Zapret 和 WARP，无需打开 Steam",
   },
   tchinese: {
     pluginTitle: "Zapret Deck",
@@ -359,6 +389,9 @@ const translations: Record<string, Record<TranslationKeys, string>> = {
     updating: "更新中...",
     language: "語言",
     support: "支援",
+    desktopTitle: "桌面模式",
+    desktopTray: "系統匣圖示",
+    desktopTrayDesc: "在桌面模式下自動啟動系統匣圖示以管理 Zapret 和 WARP，無需開啟 Steam",
   }
 };
 
@@ -372,6 +405,7 @@ const Content = () => {
   const [updatingResources, setUpdatingResources] = useState<boolean>(false);
   const [strategiesExpanded, setStrategiesExpanded] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<boolean>(false);
+  const [trayEnabled, setTrayEnabled] = useState<boolean>(true);
 
   const t = useMemo(() => {
     return translations[lang] || translations.english;
@@ -421,8 +455,25 @@ const Content = () => {
     
     getSteamLanguage().then((l) => setLang(l || "english")).catch(() => setLang("english"));
 
+    getDesktopTrayStatus()
+      .then((res) => {
+        if (res && typeof res.enabled === "boolean") {
+          setTrayEnabled(res.enabled);
+        }
+      })
+      .catch(() => {});
+
     return () => clearInterval(interval);
   }, [refreshStatus]);
+
+  const handleToggleTray = async (enable: boolean) => {
+    setTrayEnabled(enable);
+    try {
+      await setDesktopTrayEnabled(enable);
+    } catch (err) {
+      console.error("Failed to toggle desktop tray:", err);
+    }
+  };
 
   const handleServiceToggle = async (service: string, enabled: boolean) => {
     try {
@@ -761,6 +812,21 @@ const Content = () => {
         >
           {loadingWarp ? t.generatingWarp : t.generateWarp}
         </ButtonItem>
+      </PanelSectionRow>
+
+      <div style={{ display: "flex", justifyContent: "center", width: "100%", padding: "12px 0 6px 0" }}>
+        <span style={{ fontSize: "11px", fontWeight: "bold", color: "#a5a5a5", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          {t.desktopTitle}
+        </span>
+      </div>
+
+      <PanelSectionRow>
+        <ToggleField
+          label={t.desktopTray}
+          description={t.desktopTrayDesc}
+          checked={trayEnabled}
+          onChange={handleToggleTray}
+        />
       </PanelSectionRow>
 
       <PanelSectionRow>
