@@ -152,6 +152,23 @@ def get_desktop_integration_status(plugin_dir: str) -> Dict[str, Any]:
 def kill_tray_process() -> bool:
     """Terminates any running zapret tray_app.py instances."""
     try:
+        if os.geteuid() == 0:
+            user_home = get_user_home()
+            user_name = os.path.basename(user_home) or "deck"
+            subprocess.run(
+                ["systemctl", "--user", "-M", f"{user_name}@", "stop", "zapret-deck-tray"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            subprocess.run(
+                ["systemctl", "--user", "stop", "zapret-deck-tray"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+    except Exception:
+        pass
+    try:
         subprocess.run(
             ["pkill", "-f", "zapret.*tray_app.py"],
             stdout=subprocess.DEVNULL,
@@ -189,18 +206,53 @@ def launch_tray_process(plugin_dir: str) -> bool:
     except Exception:
         pass
 
-    # Discover active user display / wayland environment
+    # Try launching via systemd-run --user first (best for SteamOS session isolation)
+    try:
+        if os.geteuid() == 0:
+            res = subprocess.run(
+                [
+                    "systemd-run",
+                    "--user",
+                    "-M",
+                    f"{user_name}@",
+                    "--unit=zapret-deck-tray",
+                    "python3",
+                    script_path,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if res.returncode == 0:
+                return True
+        else:
+            res = subprocess.run(
+                [
+                    "systemd-run",
+                    "--user",
+                    "--unit=zapret-deck-tray",
+                    "python3",
+                    script_path,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if res.returncode == 0:
+                return True
+    except Exception:
+        pass
+
+    # Fallback to direct subprocess spawn
     display = os.environ.get("DISPLAY", ":0")
     wayland_display = os.environ.get("WAYLAND_DISPLAY", "wayland-0")
 
     cmd = ["python3", script_path]
 
-    # If running as root (Decky daemon), drop privileges to desktop user with clean environment
     if os.geteuid() == 0:
         cmd = [
             "sudo",
             "-u",
             user_name,
+            "env",
             f"DISPLAY={display}",
             f"WAYLAND_DISPLAY={wayland_display}",
             f"XDG_RUNTIME_DIR=/run/user/{uid}",
@@ -220,3 +272,4 @@ def launch_tray_process(plugin_dir: str) -> bool:
     except Exception as e:
         print(f"Failed to launch tray process: {e}")
         return False
+
