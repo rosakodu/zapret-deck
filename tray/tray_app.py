@@ -5,6 +5,7 @@ Provides a native StatusNotifierItem system tray popup for managing
 Zapret DPI bypass, strategies, autotune, and WARP VPN without opening Steam Big Picture.
 Fully compatible with KDE Plasma Wayland (Steam Deck Desktop Mode), supporting
 identical native context menus on BOTH Left-Click and Right-Click.
+Built using native GLib/Cairo/DBus with zero external package dependencies.
 """
 
 import sys
@@ -22,26 +23,11 @@ if PLUGIN_DIR not in sys.path:
 if PY_MODULES_DIR not in sys.path:
     sys.path.insert(0, PY_MODULES_DIR)
 
-try:
-    from PyQt6.QtCore import Qt, QTimer, QPoint, pyqtSignal, QObject
-    from PyQt6.QtGui import (
-        QPixmap, QPainter, QColor, QBrush, QPen, QPainterPath, QImage
-    )
-    from PyQt6.QtWidgets import QApplication
-except ImportError:
-    try:
-        from PySide6.QtCore import Qt, QTimer, QPoint, Signal as pyqtSignal, QObject
-        from PySide6.QtGui import (
-            QPixmap, QPainter, QColor, QBrush, QPen, QPainterPath, QImage
-        )
-        from PySide6.QtWidgets import QApplication
-    except ImportError:
-        print("Error: Neither PyQt6 nor PySide6 is installed.")
-        sys.exit(1)
-
+import cairo
 import dbus
 import dbus.service
-import dbus.mainloop.pyqt6
+import dbus.mainloop.glib
+from gi.repository import GLib
 
 from tray.api_client import ZapretDeckApiClient
 
@@ -124,87 +110,82 @@ def tr(key: str, **kwargs) -> str:
 
 
 # ─────────────────────────────────────────────────────────────
-# Dynamic Tray Icon Generator
+# Dynamic Tray Icon Generator using Cairo Vector Graphics
 # ─────────────────────────────────────────────────────────────
 
-def create_tray_pixmap(status: str = "inactive", size: int = 64) -> QPixmap:
-    """Generates crisp vector-like tray icon with status indicator."""
-    pixmap = QPixmap(size, size)
-    pixmap.fill(Qt.GlobalColor.transparent)
+def create_tray_icon_struct(status: str = "inactive", size: int = 48) -> dbus.Struct:
+    """Generates a crisp vector tray icon struct directly formatted for StatusNotifierItem."""
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
+    ctx = cairo.Context(surface)
 
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    # Clear background
+    ctx.set_operator(cairo.OPERATOR_CLEAR)
+    ctx.paint()
+    ctx.set_operator(cairo.OPERATOR_OVER)
 
     # Base shield
-    shield_color = QColor(225, 230, 240)
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(QBrush(shield_color))
-
     margin = size * 0.12
     w = size - 2 * margin
     h = size - 2 * margin
 
-    path = QPainterPath()
-    path.moveTo(size / 2, margin)
-    path.lineTo(size - margin, margin + h * 0.25)
-    path.lineTo(size - margin, margin + h * 0.6)
-    path.quadTo(size / 2, size - margin, size / 2, size - margin)
-    path.quadTo(margin, margin + h * 0.6, margin, margin + h * 0.6)
-    path.lineTo(margin, margin + h * 0.25)
-    path.closeSubpath()
-    painter.drawPath(path)
+    # Outer shield (light silver)
+    ctx.move_to(size / 2, margin)
+    ctx.line_to(size - margin, margin + h * 0.25)
+    ctx.line_to(size - margin, margin + h * 0.6)
+    ctx.curve_to(size - margin, margin + h * 0.82, size / 2, size - margin, size / 2, size - margin)
+    ctx.curve_to(size / 2, size - margin, margin, margin + h * 0.82, margin, margin + h * 0.6)
+    ctx.line_to(margin, margin + h * 0.25)
+    ctx.close_path()
+    ctx.set_source_rgba(0.88, 0.90, 0.94, 1.0)
+    ctx.fill()
 
-    # Inner cutout for shield accent
-    inner_color = QColor(26, 32, 44)
-    painter.setBrush(QBrush(inner_color))
-    inner_path = QPainterPath()
+    # Inner cutout (dark shield core)
     in_m = size * 0.22
     in_h = size - 2 * in_m
-    inner_path.moveTo(size / 2, in_m)
-    inner_path.lineTo(size - in_m, in_m + in_h * 0.25)
-    inner_path.lineTo(size - in_m, in_m + in_h * 0.55)
-    inner_path.quadTo(size / 2, size - in_m, size / 2, size - in_m)
-    inner_path.quadTo(in_m, in_m + in_h * 0.55, in_m, in_m + in_h * 0.55)
-    inner_path.lineTo(in_m, in_m + in_h * 0.25)
-    inner_path.closeSubpath()
-    painter.drawPath(inner_path)
+    ctx.move_to(size / 2, in_m)
+    ctx.line_to(size - in_m, in_m + in_h * 0.25)
+    ctx.line_to(size - in_m, in_m + in_h * 0.55)
+    ctx.curve_to(size - in_m, in_m + in_h * 0.76, size / 2, size - in_m, size / 2, size - in_m)
+    ctx.curve_to(size / 2, size - in_m, in_m, in_m + in_h * 0.76, in_m, in_m + in_h * 0.55)
+    ctx.line_to(in_m, in_m + in_h * 0.25)
+    ctx.close_path()
+    ctx.set_source_rgba(0.10, 0.12, 0.17, 1.0)
+    ctx.fill()
 
-    # Status Dot (bottom-right)
-    dot_radius = size * 0.20
-    dot_cx = size - dot_radius - 2
-    dot_cy = size - dot_radius - 2
+    # Status dot (bottom-right)
+    dot_r = size * 0.20
+    dot_cx = size - dot_r - 2
+    dot_cy = size - dot_r - 2
 
     if status == "zapret":
-        dot_color = QColor(26, 159, 255)  # Steam Blue
+        color = (0.10, 0.62, 1.00)  # Steam Blue
     elif status == "warp":
-        dot_color = QColor(16, 185, 129)  # Green
+        color = (0.06, 0.72, 0.50)  # Green
     elif status == "both":
-        dot_color = QColor(6, 182, 212)   # Cyan / Teal
+        color = (0.02, 0.71, 0.83)  # Cyan / Teal
     elif status == "autotune":
-        dot_color = QColor(245, 158, 11)  # Amber / Busy
+        color = (0.96, 0.62, 0.04)  # Amber
     elif status == "offline":
-        dot_color = QColor(239, 68, 68)   # Red
+        color = (0.94, 0.27, 0.27)  # Red
     else:
-        dot_color = QColor(148, 163, 184) # Slate gray
+        color = (0.58, 0.64, 0.72)  # Slate gray
 
-    painter.setPen(QPen(QColor(26, 31, 41), 3))
-    painter.setBrush(QBrush(dot_color))
-    painter.drawEllipse(QPoint(int(dot_cx), int(dot_cy)), int(dot_radius), int(dot_radius))
+    ctx.arc(dot_cx, dot_cy, dot_r, 0, 6.28318)
+    ctx.set_source_rgba(color[0], color[1], color[2], 1.0)
+    ctx.fill_preserve()
+    ctx.set_source_rgba(0.10, 0.12, 0.16, 1.0)
+    ctx.set_line_width(2.0)
+    ctx.stroke()
 
-    painter.end()
-    return pixmap
+    # Convert Cairo little-endian BGRA buffer to StatusNotifierItem ARGB32 network order
+    raw_bytes = surface.get_data()
+    argb = bytearray(len(raw_bytes))
+    argb[0::4] = raw_bytes[3::4]  # A
+    argb[1::4] = raw_bytes[2::4]  # R
+    argb[2::4] = raw_bytes[1::4]  # G
+    argb[3::4] = raw_bytes[0::4]  # B
 
-
-def pixmap_to_sni_pixmap(pixmap: QPixmap) -> dbus.Struct:
-    """Converts a QPixmap to org.kde.StatusNotifierItem IconPixmap ARGB32 network struct."""
-    image = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
-    w, h = image.width(), image.height()
-    raw = bytearray()
-    for y in range(h):
-        for x in range(w):
-            p = image.pixel(x, y)
-            raw.extend([(p >> 24) & 0xFF, (p >> 16) & 0xFF, (p >> 8) & 0xFF, p & 0xFF])
-    return dbus.Struct((dbus.Int32(w), dbus.Int32(h), dbus.ByteArray(raw)))
+    return dbus.Struct((dbus.Int32(size), dbus.Int32(size), dbus.ByteArray(argb)))
 
 
 # ─────────────────────────────────────────────────────────────
@@ -214,7 +195,7 @@ def pixmap_to_sni_pixmap(pixmap: QPixmap) -> dbus.Struct:
 class ZapretDeckSNI(dbus.service.Object):
     """
     Standard org.kde.StatusNotifierItem implementation.
-    Exports 'ItemIsMenu: True' which forces KDE Plasma to trigger the context
+    Crucially exports 'ItemIsMenu: True' which forces KDE Plasma to trigger the context
     menu on BOTH Left-Click (ЛКМ) and Right-Click (ПКМ).
     """
 
@@ -229,7 +210,6 @@ class ZapretDeckSNI(dbus.service.Object):
     @dbus.service.method('org.freedesktop.DBus.Properties', in_signature='s', out_signature='a{sv}')
     def GetAll(self, iface):
         if iface == 'org.kde.StatusNotifierItem':
-            icon_struct = pixmap_to_sni_pixmap(self.tray_app.current_icon_pixmap)
             return {
                 'Category': dbus.String('ApplicationStatus'),
                 'Id': dbus.String('zapret-deck'),
@@ -237,7 +217,7 @@ class ZapretDeckSNI(dbus.service.Object):
                 'Status': dbus.String('Active'),
                 'ItemIsMenu': dbus.Boolean(True),
                 'IconName': dbus.String(''),
-                'IconPixmap': dbus.Array([icon_struct], signature='(iiay)'),
+                'IconPixmap': dbus.Array([self.tray_app.current_icon_struct], signature='(iiay)'),
                 'OverlayIconPixmap': dbus.Array([], signature='(iiay)'),
                 'AttentionIconPixmap': dbus.Array([], signature='(iiay)'),
                 'AttentionIconName': dbus.String(''),
@@ -338,26 +318,15 @@ class ZapretDeckDBusMenu(dbus.service.Object):
 
 
 # ─────────────────────────────────────────────────────────────
-# Background State Signaler
+# Tray Application Controller
 # ─────────────────────────────────────────────────────────────
 
-class StateBridge(QObject):
-    state_updated = pyqtSignal(object, object, object)
-    show_notification = pyqtSignal(str, str)
-
-
-# ─────────────────────────────────────────────────────────────
-# Tray Application
-# ─────────────────────────────────────────────────────────────
-
-class ZapretDeckTrayApp(QObject):
+class ZapretDeckTrayApp:
     """Main System Tray controller managing SNI, DBusMenu, state and polling."""
 
-    def __init__(self, app: QApplication):
-        super().__init__()
-        self.app = app
+    def __init__(self, loop: GLib.MainLoop):
+        self.loop = loop
         self.client = ZapretDeckApiClient()
-        self.bridge = StateBridge()
 
         # State cache
         self.last_zapret_active: Optional[bool] = None
@@ -370,7 +339,7 @@ class ZapretDeckTrayApp(QObject):
         # Display properties
         self.current_title = tr("app_title")
         self.current_tooltip = f"{tr('app_title')} - {tr('status_inactive')}"
-        self.current_icon_pixmap = create_tray_pixmap("inactive", 48)
+        self.current_icon_struct = create_tray_icon_struct("inactive", 48)
 
         # Action registry: ID -> callback
         self.action_callbacks: Dict[int, Callable[[], None]] = {}
@@ -379,10 +348,6 @@ class ZapretDeckTrayApp(QObject):
         # Submenu mapping: parent_id -> list of child Structs
         self.menu_children_map: Dict[int, List[dbus.Struct]] = {}
         self.root_items: List[dbus.Struct] = []
-
-        # Connect signals
-        self.bridge.state_updated.connect(self._apply_state)
-        self.bridge.show_notification.connect(self._send_desktop_notification)
 
         # Setup DBus
         self.session_bus = dbus.SessionBus()
@@ -399,10 +364,8 @@ class ZapretDeckTrayApp(QObject):
         except Exception as e:
             print(f"[ZapretDeckTray] StatusNotifierWatcher warning: {e}")
 
-        # Background polling timer (every 2.5s)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._poll_status_background)
-        self.timer.start(2500)
+        # Polling timer every 2500ms
+        GLib.timeout_add(2500, self._poll_status_background)
 
         # Initial poll
         self._poll_status_background()
@@ -418,15 +381,16 @@ class ZapretDeckTrayApp(QObject):
         except Exception:
             pass
 
-    def _poll_status_background(self):
-        """Runs in background thread and emits result via Qt Signal."""
+    def _poll_status_background(self) -> bool:
+        """Runs in separate thread and dispatches result to main GLib loop."""
         def _worker():
             status = self.client.get_status()
             strategies = self.client.get_strategies() if status else []
             desktop_status = self.client.get_desktop_status() if status else {}
-            self.bridge.state_updated.emit(status, strategies, desktop_status)
+            GLib.idle_add(self._apply_state, status, strategies, desktop_status)
 
         threading.Thread(target=_worker, daemon=True).start()
+        return True
 
     def _register_action(self, callback: Callable[[], None]) -> int:
         aid = self.next_action_id
@@ -466,8 +430,8 @@ class ZapretDeckTrayApp(QObject):
         status: Optional[Dict[str, Any]],
         strategies: List[Dict[str, Any]],
         desktop_status: Dict[str, Any],
-    ):
-        """Slot executed strictly on GUI thread. Builds menu and updates icon."""
+    ) -> bool:
+        """Slot executed strictly on main thread. Builds menu and updates icon."""
         self.status = status
         self.strategies = strategies
         self.desktop_status = desktop_status
@@ -477,7 +441,7 @@ class ZapretDeckTrayApp(QObject):
         self.next_action_id = 100
 
         if not status:
-            self.current_icon_pixmap = create_tray_pixmap("offline", 48)
+            self.current_icon_struct = create_tray_icon_struct("offline", 48)
             self.current_tooltip = f"{tr('app_title')} - {tr('status_offline')}"
             self.sni.NewIcon()
             self.sni.NewToolTip()
@@ -493,7 +457,7 @@ class ZapretDeckTrayApp(QObject):
             ))
             self.root_items = [status_item]
             self.dbusmenu.bump_layout()
-            return
+            return False
 
         zapret_active = bool(status.get("zapret_active") or status.get("zapret_enabled"))
         warp_active = bool(status.get("warp_active") or status.get("warp_enabled"))
@@ -552,7 +516,7 @@ class ZapretDeckTrayApp(QObject):
             icon_kind = "inactive"
             self.current_tooltip = f"{tr('app_title')} - {tr('status_inactive')}"
 
-        self.current_icon_pixmap = create_tray_pixmap(icon_kind, 48)
+        self.current_icon_struct = create_tray_icon_struct(icon_kind, 48)
         self.sni.NewIcon()
         self.sni.NewToolTip()
 
@@ -755,6 +719,7 @@ class ZapretDeckTrayApp(QObject):
 
         self.root_items = new_root_items
         self.dbusmenu.bump_layout()
+        return False
 
     def _set_service(self, service: str, enabled: bool):
         def _worker():
@@ -785,11 +750,11 @@ class ZapretDeckTrayApp(QObject):
         def _worker():
             success = self.client.generate_warp()
             if success:
-                self.bridge.show_notification.emit(
+                self._send_desktop_notification(
                     tr("app_title"), tr("notify_warp_gen_done")
                 )
             else:
-                self.bridge.show_notification.emit(
+                self._send_desktop_notification(
                     tr("app_title"), tr("notify_warp_gen_fail")
                 )
             time.sleep(0.4)
@@ -804,7 +769,7 @@ class ZapretDeckTrayApp(QObject):
         threading.Thread(target=_worker, daemon=True).start()
 
     def _exit_tray(self):
-        self.app.quit()
+        self.loop.quit()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -812,18 +777,13 @@ class ZapretDeckTrayApp(QObject):
 # ─────────────────────────────────────────────────────────────
 
 def main():
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    loop = GLib.MainLoop()
+    tray = ZapretDeckTrayApp(loop)
     try:
-        dbus.mainloop.pyqt6.DBusQtMainLoop(set_as_default=True)
-    except Exception:
+        loop.run()
+    except (KeyboardInterrupt, SystemExit):
         pass
-
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
-    app.setApplicationName("ZapretDeckTray")
-
-    tray = ZapretDeckTrayApp(app)
-
-    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
