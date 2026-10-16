@@ -85,7 +85,7 @@ def _safe_write_file(target_path: str, content: str) -> bool:
 
         with open(target_path, "w", encoding="utf-8") as f:
             f.write(content)
-        os.chmod(target_path, 0o755)
+        os.chmod(target_path, 0o644)
 
         if os.geteuid() == 0:
             uid, gid = _get_target_uid_gid()

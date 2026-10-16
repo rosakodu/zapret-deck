@@ -353,22 +353,43 @@ class ZapretDeckTrayApp:
         self.session_bus = dbus.SessionBus()
         self.sni = ZapretDeckSNI(self.session_bus, '/StatusNotifierItem', self)
         self.dbusmenu = ZapretDeckDBusMenu(self.session_bus, '/MenuBar', self)
+        self.sni_registered = False
 
-        # Register with KDE Plasma StatusNotifierWatcher
+        # Listen for StatusNotifierHostRegistered or StatusNotifierWatcher appearing
         try:
-            watcher = self.session_bus.get_object(
-                'org.kde.StatusNotifierWatcher', '/StatusNotifierWatcher'
+            self.session_bus.add_signal_receiver(
+                self._on_host_registered,
+                signal_name='StatusNotifierHostRegistered',
+                dbus_interface='org.kde.StatusNotifierWatcher',
             )
-            watcher_iface = dbus.Interface(watcher, 'org.kde.StatusNotifierWatcher')
-            watcher_iface.RegisterStatusNotifierItem(self.session_bus.get_unique_name())
-        except Exception as e:
-            print(f"[ZapretDeckTray] StatusNotifierWatcher warning: {e}")
+        except Exception:
+            pass
+
+        self._register_sni()
 
         # Polling timer every 2500ms
         GLib.timeout_add(2500, self._poll_status_background)
 
         # Initial poll
         self._poll_status_background()
+
+    def _on_host_registered(self):
+        """Called when a new StatusNotifierHost (e.g. plasmashell panel) registers."""
+        self._register_sni()
+
+    def _register_sni(self) -> bool:
+        """Registers StatusNotifierItem with org.kde.StatusNotifierWatcher."""
+        try:
+            watcher = self.session_bus.get_object(
+                'org.kde.StatusNotifierWatcher', '/StatusNotifierWatcher'
+            )
+            watcher_iface = dbus.Interface(watcher, 'org.kde.StatusNotifierWatcher')
+            watcher_iface.RegisterStatusNotifierItem(self.session_bus.get_unique_name())
+            self.sni_registered = True
+            return True
+        except Exception as e:
+            self.sni_registered = False
+            return False
 
     def _send_desktop_notification(self, title: str, message: str, timeout_ms: int = 4000):
         """Sends native desktop notification via org.freedesktop.Notifications."""
@@ -384,6 +405,8 @@ class ZapretDeckTrayApp:
     def _poll_status_background(self) -> bool:
         """Runs in separate thread and dispatches result to main GLib loop."""
         def _worker():
+            if not self.sni_registered:
+                GLib.idle_add(self._register_sni)
             status = self.client.get_status()
             strategies = self.client.get_strategies() if status else []
             desktop_status = self.client.get_desktop_status() if status else {}
