@@ -12,6 +12,7 @@ import sys
 import os
 import time
 import threading
+import fcntl
 from typing import Optional, Dict, List, Any, Callable
 
 # Ensure plugin root directory is on sys.path
@@ -351,6 +352,16 @@ class ZapretDeckTrayApp:
 
         # Setup DBus
         self.session_bus = dbus.SessionBus()
+        try:
+            self.bus_name = dbus.service.BusName(
+                'org.kde.StatusNotifierItem.zapret_deck',
+                self.session_bus,
+                do_not_queue=True
+            )
+        except Exception:
+            print("[ZapretDeckTray] DBus name org.kde.StatusNotifierItem.zapret_deck already claimed. Exiting.")
+            sys.exit(0)
+
         self.sni = ZapretDeckSNI(self.session_bus, '/StatusNotifierItem', self)
         self.dbusmenu = ZapretDeckDBusMenu(self.session_bus, '/MenuBar', self)
         self.sni_registered = False
@@ -384,7 +395,7 @@ class ZapretDeckTrayApp:
                 'org.kde.StatusNotifierWatcher', '/StatusNotifierWatcher'
             )
             watcher_iface = dbus.Interface(watcher, 'org.kde.StatusNotifierWatcher')
-            watcher_iface.RegisterStatusNotifierItem(self.session_bus.get_unique_name())
+            watcher_iface.RegisterStatusNotifierItem('org.kde.StatusNotifierItem.zapret_deck')
             self.sni_registered = True
             return True
         except Exception as e:
@@ -796,10 +807,36 @@ class ZapretDeckTrayApp:
 
 
 # ─────────────────────────────────────────────────────────────
-# Entry Point
+# Entry Point & Singleton Lock
 # ─────────────────────────────────────────────────────────────
 
+_LOCK_FILE_HANDLE = None
+
+
+def acquire_single_instance_lock() -> bool:
+    """Ensures only one instance of the tray companion runs per desktop session."""
+    global _LOCK_FILE_HANDLE
+    user_runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if user_runtime and os.path.isdir(user_runtime):
+        lock_path = os.path.join(user_runtime, "zapret-deck-tray.lock")
+    else:
+        lock_path = f"/tmp/zapret-deck-tray-{os.getuid()}.lock"
+
+    try:
+        _LOCK_FILE_HANDLE = open(lock_path, "w")
+        fcntl.flock(_LOCK_FILE_HANDLE, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _LOCK_FILE_HANDLE.write(str(os.getpid()))
+        _LOCK_FILE_HANDLE.flush()
+        return True
+    except (BlockingIOError, OSError):
+        return False
+
+
 def main():
+    if not acquire_single_instance_lock():
+        # Another instance is already running in this user session
+        sys.exit(0)
+
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     loop = GLib.MainLoop()
     tray = ZapretDeckTrayApp(loop)

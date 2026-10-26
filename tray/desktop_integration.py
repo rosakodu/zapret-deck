@@ -179,11 +179,25 @@ def kill_tray_process() -> bool:
         return False
 
 
+def is_desktop_session_active() -> bool:
+    """Checks whether KDE Plasma desktop session is currently running."""
+    try:
+        res = subprocess.run(["pgrep", "-x", "plasmashell"], stdout=subprocess.PIPE)
+        return res.returncode == 0 and bool(res.stdout.strip())
+    except Exception:
+        return False
+
+
 def launch_tray_process(plugin_dir: str) -> bool:
     """Launches tray_app.py in the user's graphical desktop session."""
     script_path = os.path.join(plugin_dir, "tray", "tray_app.py")
     if not os.path.exists(script_path):
         return False
+
+    # If desktop session is not active (e.g. running in Steam Game Mode),
+    # autostart desktop entry will launch the tray companion when switching to Desktop Mode.
+    if not is_desktop_session_active():
+        return True
 
     # Check if already running
     try:
