@@ -5,6 +5,7 @@ import logging
 import asyncio
 import subprocess
 import functools
+import inspect
 import re
 import traceback as _traceback
 
@@ -16,7 +17,11 @@ if plugin_dir not in sys.path:
 if py_modules_dir not in sys.path:
     sys.path.insert(0, py_modules_dir)
 
-import decky
+try:
+    import decky
+except ImportError:
+    from unittest.mock import MagicMock
+    decky = MagicMock()
 
 # Инициализация логгера
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +31,12 @@ from zapret_deck.zapret_manager import ZapretManager
 from zapret_deck.warp_manager import WarpManager
 from zapret_deck.strategies import DEFAULT_STRATEGIES
 from zapret_deck.server import ZapretDeckApiServer
+from zapret_deck.bat_parser import parse_strategy_string, ParsedStrategy
+from zapret_deck.fakes_manager import FakesManager
+from zapret_deck.autotune import AutotuneManager, inject_ttl
+from zapret_deck.diagnostics import run_system_diagnostics, check_nfqueue_status
+from zapret_deck.gamefilter import GameFilterManager
+from zapret_deck.remote_fetcher import RemoteFetcher
 from tray.desktop_integration import (
     set_autostart,
     get_desktop_integration_status,
@@ -43,7 +54,7 @@ def _rpc(func):
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
         try:
-            if asyncio.iscoroutinefunction(func):
+            if inspect.iscoroutinefunction(func):
                 return await func(self, *args, **kwargs)
             return func(self, *args, **kwargs)
         except Exception as e:
@@ -92,6 +103,15 @@ class Plugin:
         
         self.zapret_manager = ZapretManager(plugin_dir)
         self.warp_manager = WarpManager(plugin_dir, SETTINGS_DIR)
+        self.autotune_manager = AutotuneManager(zapret_manager=self.zapret_manager)
+        self.remote_fetcher = RemoteFetcher(custom_file=CUSTOM_STRATEGIES_FILE)
+
+        # Восстанавливаем состояние GameFilter
+        if "gamefilter_enabled" in self.settings:
+            if self.settings["gamefilter_enabled"]:
+                self.zapret_manager.game_filter.enable()
+            else:
+                self.zapret_manager.game_filter.disable()
 
     def get_all_strategies(self) -> list:
         """Возвращает список стандартных и пользовательских стратегий"""
@@ -389,7 +409,7 @@ class Plugin:
         return {"success": True}
 
     async def _run_autotune(self):
-        logger.info("Starting background autotune...")
+        logger.info("Starting background autotune with TLS 1.3 socket testing...")
         self.zapret_manager.stop()
         self.warp_manager.stop()
 
@@ -405,47 +425,26 @@ class Plugin:
             logger.error(f"Failed to create test hostlist: {e}")
             test_hostlist = HOSTLIST_FILE
 
-        clean_env = os.environ.copy()
-        clean_env.pop("LD_LIBRARY_PATH", None)
+        try:
+            strategies = self.get_all_strategies()
+            ranked = await self.autotune_manager.rank_strategies_async(
+                strategies,
+                hostlist_file=test_hostlist,
+                delay_after_start=2.5,
+            )
 
-        for i, strat in enumerate(self.get_all_strategies()):
-            logger.info(f"Autotune testing: {strat['name']}")
-            try:
-                # Запускаем nfqws с этой стратегией и тестовым хостлистом
-                self.zapret_manager.start(strat["args"], test_hostlist)
-                await asyncio.sleep(3) # даем nfqws примениться
-                
-                # Тестируем доступность с обязательным флагом -4 (принудительно IPv4)
-                success = False
-                for target_url in ["https://www.youtube.com", "https://www.google.com"]:
-                    for attempt in range(2):
-                        proc = await asyncio.create_subprocess_exec(
-                            "/usr/bin/curl", "-4", "-s", "-I", "-k", "--connect-timeout", "4", target_url,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            env=clean_env
-                        )
-                        stdout, stderr = await proc.communicate()
-                        
-                        if proc.returncode == 0:
-                            logger.info(f"Autotune target {target_url} HTTP check SUCCESS (rc=0)")
-                            success = True
-                            break
-                        else:
-                            err_msg = stderr.decode('utf-8', errors='ignore').strip()
-                            logger.info(f"Autotune target {target_url} attempt {attempt+1} failed (rc={proc.returncode}): {err_msg}")
-                        await asyncio.sleep(1)
-                    if success:
-                        break
-                
-                if success:
-                     logger.info(f"Autotune success! Strategy works: {strat['name']}")
-                     worked_strategy = strat["args"]
-                     self.settings["autotuned_strategy_name"] = strat["name"]
-                     self.save_settings()
-                     break
-            except Exception as e:
-                logger.error(f"Error during autotune test {strat['name']}: {e}")
+            for strat_result in ranked:
+                if strat_result["success"]:
+                    logger.info(
+                        f"Autotune success! Strategy works: {strat_result['name']} "
+                        f"(success_rate={strat_result['success_rate']}, latency={strat_result['avg_latency_ms']}ms)"
+                    )
+                    worked_strategy = strat_result["args"]
+                    self.settings["autotuned_strategy_name"] = strat_result["name"]
+                    self.save_settings()
+                    break
+        except Exception as e:
+            logger.error(f"Error during autotune test: {e}")
 
         # Удаляем временный файл хостлиста
         try:
@@ -471,6 +470,122 @@ class Plugin:
 
         # В самом конце сбрасываем флаг подбора, когда служба уже полностью запущена
         self.autotune_in_progress = False
+
+    @_rpc
+    async def start_ttl_tune(self, strategy_args: str = None, ttl_min: int = 1, ttl_max: int = 20) -> dict:
+        """Подбирает оптимальный TTL для стратегии через прямое сокетное тестирование"""
+        target_strategy = strategy_args or self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
+        logger.info(f"Starting TTL tuning (range {ttl_min}-{ttl_max}) for strategy...")
+
+        ttl_range = range(max(1, ttl_min), min(255, ttl_max) + 1)
+        res = await self.autotune_manager.tune_ttl_async(
+            target_strategy,
+            ttl_range=ttl_range,
+            hostlist_file=HOSTLIST_FILE,
+            delay_after_start=1.5,
+        )
+
+        if res["success"]:
+            best_args = res["best_strategy_args"]
+            self.settings["current_strategy"] = best_args
+            self.save_settings()
+            if self.settings.get("zapret_enabled", False):
+                self.zapret_manager.start(best_args, HOSTLIST_FILE)
+            logger.info(f"TTL tuning succeeded: best TTL={res['best_ttl']}")
+
+        return {
+            "success": res["success"],
+            "best_ttl": res["best_ttl"],
+            "best_strategy_args": res["best_strategy_args"],
+            "best_success_rate": res["best_success_rate"],
+            "best_latency_ms": res["best_latency_ms"],
+        }
+
+    @_rpc
+    async def get_available_fakes(self) -> dict:
+        """Возвращает список всех доступных .bin фейков и активный Discord UDP фейк"""
+        fakes = self.zapret_manager.fakes_manager.list_available_fakes()
+        active = self.zapret_manager.fakes_manager.get_active_fake()
+        return {
+            "success": True,
+            "fakes": fakes,
+            "active_fake": active,
+        }
+
+    @_rpc
+    async def set_active_fake(self, fake_name: str) -> dict:
+        """Устанавливает активный Discord UDP фейк и перезапускает zapret при необходимости"""
+        success = self.zapret_manager.fakes_manager.set_active_fake(fake_name)
+        if success and self.settings.get("zapret_enabled", False):
+            strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
+            self.zapret_manager.start(strategy, HOSTLIST_FILE)
+        return {
+            "success": success,
+            "active_fake": fake_name,
+        }
+
+    @_rpc
+    async def parse_bat_strategy(self, bat_content_or_path: str, name: str = "") -> dict:
+        """Парсит Windows .bat файл или строку стратегии в Linux аргументы nfqws"""
+        parsed = parse_strategy_string(bat_content_or_path, name=name)
+        return {
+            "success": True,
+            "strategy": parsed.to_dict(),
+        }
+
+    @_rpc
+    async def get_diagnostics(self) -> dict:
+        """Запускает полную сетевую диагностику (модули ядра, NFQUEUE, DoH DNS-спуфинг)"""
+        results = run_system_diagnostics()
+        return {
+            "success": True,
+            "diagnostics": results,
+        }
+
+    @_rpc
+    async def check_queue_status(self) -> dict:
+        """Возвращает информацию о доступности и состоянии очереди NFQUEUE 220"""
+        status = check_nfqueue_status(220)
+        return {
+            "success": True,
+            "queue": status,
+        }
+
+    @_rpc
+    async def get_gamefilter_config(self) -> dict:
+        """Возвращает текущую конфигурацию защиты игрового UDP трафика (GameFilter)"""
+        cfg = self.zapret_manager.game_filter.to_dict()
+        return {
+            "success": True,
+            "config": cfg,
+        }
+
+    @_rpc
+    async def set_gamefilter_enabled(self, enabled: bool) -> dict:
+        """Включает или выключает GameFilter и динамически обновляет nftables"""
+        if enabled:
+            self.zapret_manager.game_filter.enable()
+        else:
+            self.zapret_manager.game_filter.disable()
+
+        self.settings["gamefilter_enabled"] = bool(enabled)
+        self.save_settings()
+
+        if self.settings.get("zapret_enabled", False):
+            strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
+            parsed = self.zapret_manager.parse_strategy(strategy)
+            self.zapret_manager.setup_nftables(parsed.tcp_ports, parsed.udp_ports)
+
+        return {
+            "success": True,
+            "enabled": self.zapret_manager.game_filter.is_enabled(),
+        }
+
+    @_rpc
+    async def sync_remote_strategies(self, repo: str = None, branch: str = None) -> dict:
+        """Загружает свежие .bat стратегии из GitHub репозитория в custom_strategies.json"""
+        res = self.remote_fetcher.sync(repo=repo, branch=branch, merge=True)
+        return res
 
     @_rpc
     async def update_resources(self) -> dict:

@@ -2,6 +2,19 @@ import os
 import subprocess
 import logging
 import signal
+import shutil
+import shlex
+
+try:
+    from zapret_deck.bat_parser import parse_strategy_string, ParsedStrategy
+    from zapret_deck.fakes_manager import FakesManager
+    from zapret_deck.gamefilter import GameFilterManager
+    from zapret_deck.diagnostics import check_nfqueue_status
+except ImportError:
+    from .bat_parser import parse_strategy_string, ParsedStrategy
+    from .fakes_manager import FakesManager
+    from .gamefilter import GameFilterManager
+    from .diagnostics import check_nfqueue_status
 
 logger = logging.getLogger("zapret-deck.zapret")
 
@@ -11,10 +24,40 @@ QUEUE_NUM = 220
 RULE_COMMENT = "Added by zapret-deck"
 
 class ZapretManager:
-    def __init__(self, plugin_dir: str):
+    def __init__(self, plugin_dir: str, shared_dir: str = "/var/lib/zapret-deck"):
         self.plugin_dir = plugin_dir
+        self.shared_dir = shared_dir
         self.bin_path = os.path.join(plugin_dir, "bin", "nfqws")
         self.log_file = os.path.join(plugin_dir, "zapret.log")
+        self.fakes_manager = FakesManager(os.path.join(plugin_dir, "bin"), shared_dir=shared_dir)
+        self.game_filter = GameFilterManager(enabled=True)
+
+    def is_nfqueue_busy(self, queue_num: int = QUEUE_NUM) -> bool:
+        """Проверяет, занята ли очередь NFQUEUE другим процессом."""
+        status = check_nfqueue_status(queue_num)
+        return status.get("is_busy", False)
+
+    def cleanup_nfqueue(self, queue_num: int = QUEUE_NUM) -> bool:
+        """Принудительно освобождает очередь NFQUEUE и завершает зависшие процессы."""
+        logger.info(f"Cleaning up NFQUEUE {queue_num}...")
+        status = check_nfqueue_status(queue_num)
+        peer_pid = status.get("peer_pid")
+        if peer_pid and peer_pid > 1:
+            logger.info(f"Terminating queue holder process PID {peer_pid}")
+            self._run_cmd(["kill", "-15", str(peer_pid)])
+            self._run_cmd(["kill", "-9", str(peer_pid)])
+
+        self._run_cmd(["pkill", "-9", "-f", self.bin_path])
+        self._run_cmd(["pkill", "-9", "-f", f"nfqws.*{queue_num}"])
+        self.clear_nftables()
+        return not self.is_nfqueue_busy(queue_num)
+
+    def ensure_queue_available(self, queue_num: int = QUEUE_NUM) -> bool:
+        """Гарантирует доступность NFQUEUE перед стартом, выполняя автоочистку при занятости."""
+        if self.is_nfqueue_busy(queue_num):
+            logger.warning(f"NFQUEUE {queue_num} is occupied. Performing auto-cleanup...")
+            return self.cleanup_nfqueue(queue_num)
+        return True
 
     def _run_cmd(self, cmd: list) -> tuple:
         """Вспомогательный метод для запуска системных команд"""
@@ -54,7 +97,7 @@ class ZapretManager:
             return f"{{ {ports_list[0]} }}"
         return "{ " + ", ".join(ports_list) + " }"
 
-    def setup_nftables(self, tcp_ports: str = "80,443", udp_ports: str = "443"):
+    def setup_nftables(self, tcp_ports: str = "80,443", udp_ports: str = "443", enable_game_filter: bool = True):
         """Создает правила nftables для перенаправления HTTP/HTTPS/QUIC в nfqws"""
         logger.info(f"Setting up nftables rules for TCP: {tcp_ports}, UDP: {udp_ports}...")
         
@@ -74,7 +117,19 @@ class ZapretManager:
         # 3. Очищаем старые правила в цепочке
         self.clear_nftables()
 
-        # 4. Добавляем правило перенаправления TCP
+        # 4. GameFilter: добавляем accept bypass правило для игровых UDP портов перед NFQUEUE
+        if enable_game_filter and self.game_filter and self.game_filter.is_enabled():
+            game_ports = self.game_filter.get_nftables_ports()
+            if game_ports:
+                rc, _, err = self._run_cmd([
+                    "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
+                    "meta", "skuid", "!=", "nobody", "udp", "dport", game_ports, "counter", "accept",
+                    "comment", '"zapret-deck-gamefilter-bypass"'
+                ])
+                if rc != 0:
+                    logger.warning(f"Failed to add GameFilter bypass rule: {err}")
+
+        # 5. Добавляем правило перенаправления TCP
         tcp_formatted = self._format_ports_nft(tcp_ports)
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
@@ -84,7 +139,7 @@ class ZapretManager:
         if rc != 0:
             raise Exception(f"Failed to add TCP redirect rule: {err}")
 
-        # 5. Добавляем правило перенаправления UDP
+        # 6. Добавляем правило перенаправления UDP
         udp_formatted = self._format_ports_nft(udp_ports)
         rc, _, err = self._run_cmd([
             "nft", "add", "rule", "inet", TABLE_NAME, CHAIN_NAME,
@@ -98,9 +153,10 @@ class ZapretManager:
         """Запускает nfqws с выбранной стратегией"""
         logger.info(f"Starting zapret (nfqws) with strategy args: {strategy_args}")
         self.stop()
+        self.ensure_queue_available(QUEUE_NUM)
 
         import shutil
-        shared_dir = "/var/lib/zapret-deck"
+        shared_dir = self.shared_dir
         shared_lists = os.path.join(shared_dir, "lists")
         shared_bin = os.path.join(shared_dir, "bin")
 
@@ -108,6 +164,12 @@ class ZapretManager:
             # Создаем общие папки
             os.makedirs(shared_lists, exist_ok=True)
             os.makedirs(shared_bin, exist_ok=True)
+
+            # 0. Гарантируем наличие активного Discord UDP фейка в bin плагина
+            try:
+                self.fakes_manager.ensure_active_fake()
+            except Exception as fake_err:
+                logger.warning(f"Failed to ensure active fake: {fake_err}")
 
             # 1. Копируем все файлы списков из локального плагина в общую папку
             local_lists_dir = os.path.join(self.plugin_dir, "lists")
@@ -151,27 +213,23 @@ class ZapretManager:
             logger.error(f"Failed to prepare shared directory: {e}")
             raise e
 
-        # Парсим порты и отфильтровываем аргументы
-        tcp_ports = "80,443"
-        udp_ports = "443"
-        
-        import shlex
-        strat_args = shlex.split(strategy_args)
-        
+        # Парсим стратегию (поддерживаются .bat файлы, winws и nfqws строки)
+        parsed = parse_strategy_string(strategy_args)
+        tcp_ports = parsed.tcp_ports
+        udp_ports = parsed.udp_ports
+
         filtered_args = []
-        for arg in strat_args:
+        for arg in parsed.clean_args_list:
             # Заменяем плейсхолдеры на пути к ОБЩЕЙ папке, доступной для nobody
-            arg_replaced = arg.replace("%BIN%", shared_bin + "/").replace("%LISTS%", shared_lists + "/")
-            
-            if arg.startswith("--wf-tcp="):
-                tcp_ports = arg.split("=")[1]
-            elif arg.startswith("--wf-udp="):
-                udp_ports = arg.split("=")[1]
-            elif arg == "--filter-tcp=" or arg == "--filter-udp=":
-                # Пропускаем пустые фильтры портов, которые ломают nfqws v72.5
-                continue
-            else:
-                filtered_args.append(arg_replaced)
+            arg_replaced = (
+                arg.replace("%BIN%/", shared_bin + "/")
+                .replace("%BIN%\\", shared_bin + "/")
+                .replace("%BIN%", shared_bin + "/")
+                .replace("%LISTS%/", shared_lists + "/")
+                .replace("%LISTS%\\", shared_lists + "/")
+                .replace("%LISTS%", shared_lists + "/")
+            )
+            filtered_args.append(arg_replaced)
 
         # 1. Создаем nftables правила перед стартом демона
         self.setup_nftables(tcp_ports, udp_ports)
@@ -202,17 +260,16 @@ class ZapretManager:
             raise e
 
     def stop(self):
-        """Останавливает nfqws и очищает nftables"""
+        """Останавливает nfqws и очищает nftables и NFQUEUE"""
         logger.info("Stopping zapret...")
-        
-        # Убиваем процессы nfqws
-        self._run_cmd(["pkill", "-f", self.bin_path])
-        
-        # На всякий случай жестко убиваем
-        rc, stdout, _ = self._run_cmd(["pgrep", "-f", self.bin_path])
-        if stdout:
-            self._run_cmd(["pkill", "-9", "-f", self.bin_path])
-
-        # Очищаем nftables
-        self.clear_nftables()
+        self.cleanup_nfqueue(QUEUE_NUM)
         logger.info("Zapret stopped and cleaned up")
+
+    def parse_strategy(self, strategy_input: str) -> ParsedStrategy:
+        """Парсит строку стратегии или .bat/.cmd файл."""
+        return parse_strategy_string(strategy_input)
+
+    def apply_bat_file(self, bat_path: str, hostlist_file: str = None):
+        """Запускает nfqws напрямую из файла .bat стратегии."""
+        parsed = parse_strategy_string(bat_path)
+        return self.start(parsed.clean_args, hostlist_file=hostlist_file)
