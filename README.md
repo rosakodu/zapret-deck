@@ -1,5 +1,13 @@
 # zapret-deck
 
+<p align="center">
+  <a href="https://deckyloader.ru/">
+    <img src="assets/plugin_store.png" alt="Decky Loader Россия" width="180">
+    <br>
+    <b>Плагин сделан при поддержке Decky Loader Россия</b>
+  </a>
+</p>
+
 [🇺🇸 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇷 فارسی](README.fa.md) | [🇹🇷 Türkçe](README.tr.md)
 
 A Decky Loader plugin for Steam Deck that allows you to bypass DPI blocks (YouTube, Discord, etc.) using `zapret` (`nfqws`) desync strategies and connect to **Cloudflare WARP VPN** using `usque` with automatic system-wide routing.

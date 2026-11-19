@@ -1,5 +1,13 @@
 # zapret-deck
 
+<p align="center">
+  <a href="https://deckyloader.ru/">
+    <img src="assets/plugin_store.png" alt="Decky Loader Россия" width="180">
+    <br>
+    <b>این پلاگین با پشتیبانی Decky Loader Россия ساخته شده است</b>
+  </a>
+</p>
+
 [🇺🇸 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇷 فارسی](README.fa.md) | [🇹🇷 Türkçe](README.tr.md)
 
 یک پلاگین برای Decky Loader در Steam Deck که به شما امکان دور زدن فیلترینگ DPI (یوتیوب، دیسکورد و غیره) با استراتژی‌های `zapret` (`nfqws`) و اتصال به **Cloudflare WARP VPN** با `usque` و مسیریابی کامل شبکه را می‌دهد.

@@ -1,5 +1,13 @@
 # zapret-deck
 
+<p align="center">
+  <a href="https://deckyloader.ru/">
+    <img src="assets/plugin_store.png" alt="Decky Loader Россия" width="180">
+    <br>
+    <b>本外掛由 Decky Loader Россия 支援製作</b>
+  </a>
+</p>
+
 [🇺🇸 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇷 فارسی](README.fa.md) | [🇹🇷 Türkçe](README.tr.md)
 
 一款適用於 Steam Deck 的 Decky Loader 外掛程式，允許您使用 `zapret` (`nfqws`) 策略繞過 DPI 封鎖（YouTube、Discord 等），並透過 `usque` 自動全域路由連接至 **Cloudflare WARP VPN**。

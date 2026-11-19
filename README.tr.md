@@ -1,5 +1,13 @@
 # zapret-deck
 
+<p align="center">
+  <a href="https://deckyloader.ru/">
+    <img src="assets/plugin_store.png" alt="Decky Loader Россия" width="180">
+    <br>
+    <b>Bu eklenti Decky Loader Россия desteğiyle yapılmıştır</b>
+  </a>
+</p>
+
 [🇺🇸 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇷 فارسی](README.fa.md) | [🇹🇷 Türkçe](README.tr.md)
 
 Steam Deck için `zapret` (`nfqws`) stratejilerini kullanarak DPI engellerini (YouTube, Discord vb.) aşmanızı ve otomatik sistem genelinde yönlendirme ile `usque` kullanarak **Cloudflare WARP VPN**'e bağlanmanızı sağlayan bir Decky Loader eklentisi.

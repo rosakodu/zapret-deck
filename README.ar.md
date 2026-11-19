@@ -1,5 +1,13 @@
 # zapret-deck
 
+<p align="center">
+  <a href="https://deckyloader.ru/">
+    <img src="assets/plugin_store.png" alt="Decky Loader Россия" width="180">
+    <br>
+    <b>تم تطوير هذه الإضافة بدعم من Decky Loader Россия</b>
+  </a>
+</p>
+
 [🇺🇸 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇷 فارسی](README.fa.md) | [🇹🇷 Türkçe](README.tr.md)
 
 إضافة لـ Decky Loader على Steam Deck تتيح لك تجاوز فحص الحزم العميق DPI (مثل YouTube و Discord) باستخدام استراتيجيات `zapret` (`nfqws`)، والاتصال بـ **Cloudflare WARP VPN** عبر `usque` بالتوجيه الشامل التلقائي.

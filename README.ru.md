@@ -1,5 +1,13 @@
 # zapret-deck
 
+<p align="center">
+  <a href="https://deckyloader.ru/">
+    <img src="assets/plugin_store.png" alt="Decky Loader Россия" width="180">
+    <br>
+    <b>Плагин сделан при поддержке Decky Loader Россия</b>
+  </a>
+</p>
+
 [🇺🇸 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇷 فارسی](README.fa.md) | [🇹🇷 Türkçe](README.tr.md)
 
 Плагин для Decky Loader на Steam Deck, позволяющий обходить блокировки DPI (YouTube, Discord и др.) с помощью стратегий `zapret` (`nfqws`), а также подключаться к **Cloudflare WARP VPN** через `usque` с автоматической системной маршрутизацией.

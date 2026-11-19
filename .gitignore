@@ -5,3 +5,4 @@ node_modules/
 zapret-deck.zip
 open_projacktor.sh
 *.png
+!assets/*.png
