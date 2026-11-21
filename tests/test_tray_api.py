@@ -6,6 +6,7 @@ Verifies server lifecycle, endpoint responses, and client methods.
 import os
 import sys
 import asyncio
+import tempfile
 import unittest
 
 # Ensure root dir and py_modules are in sys.path
@@ -69,12 +70,24 @@ class MockPlugin:
 class TestZapretDeckApi(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.plugin = MockPlugin()
-        self.test_port = 45998
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = os.path.join(directory.name, "tray.sock")
         self.server = ZapretDeckApiServer(
-            self.plugin, host="127.0.0.1", port=self.test_port, socket_path=None
+            self.plugin, socket_path=path, allowed_uid=os.geteuid()
         )
         await self.server.start()
-        self.client = ZapretDeckApiClient(host="127.0.0.1", port=self.test_port)
+        self.client = ZapretDeckApiClient(socket_path=path)
+
+    async def test_rejects_unexpected_peer_uid(self):
+        self.server.allowed_uid = os.geteuid() + 1
+        self.assertFalse(
+            await asyncio.to_thread(self.client.set_service_state, "zapret", True)
+        )
+        self.assertFalse(self.plugin.settings["zapret_enabled"])
+
+    def test_socket_mode(self):
+        self.assertEqual(os.stat(self.server.socket_path).st_mode & 0o777, 0o600)
 
     async def asyncTearDown(self):
         await self.server.stop()
@@ -84,7 +97,7 @@ class TestZapretDeckApi(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(status)
         self.assertFalse(status.get("zapret_enabled"))
         self.assertEqual(status.get("current_strategy_name"), "Test Strategy")
-        self.assertEqual(status.get("version"), "1.1.1")
+        self.assertEqual(status.get("version"), "1.2.1")
 
     async def test_daemon_strategies(self):
         strategies = await asyncio.to_thread(self.client.get_strategies)

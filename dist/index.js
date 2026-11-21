@@ -514,6 +514,9 @@ const Content = () => {
                     body: isSelected ? "Выбор стратегии отменен" : t.appliedStrategy,
                 });
             }
+            else {
+                toaster.toast({ title: t.error, body: res.error || t.error });
+            }
             refreshStatus();
         }
         catch (e) {

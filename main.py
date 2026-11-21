@@ -1,4 +1,5 @@
 import os
+import pwd
 import sys
 import json
 import logging
@@ -156,19 +157,21 @@ class Plugin:
         except Exception as e:
             decky.logger.error(f"Emergency cleanup on start failed: {e}")
             
-        # Восстанавливаем сохраненное состояние служб
-        if self.settings.get("zapret_enabled", False):
-            strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
-            decky.logger.info(f"Restoring Zapret Bypass on startup with strategy: {strategy}")
-            self.zapret_manager.start(strategy, HOSTLIST_FILE)
-            
-        if self.settings.get("warp_enabled", False):
-            decky.logger.info("Restoring WARP Bypass on startup")
-            self.warp_manager.start()
+        # IPC stays available even when a saved service fails to start.
+        try:
+            desktop_uid = pwd.getpwnam("deck").pw_uid if os.geteuid() == 0 else os.geteuid()
+            self.api_server = ZapretDeckApiServer(self, logger=decky.logger, allowed_uid=desktop_uid)
+            await self.api_server.start()
+        except (KeyError, OSError) as e:
+            decky.logger.error(f"Failed to start tray API: {e}")
 
-        # Запускаем локальный IPC API сервер для системного трея в режиме рабочего стола
-        self.api_server = ZapretDeckApiServer(self, logger=decky.logger)
-        await self.api_server.start()
+        for service in ("zapret", "warp"):
+            if self.settings.get(f"{service}_enabled"):
+                result = await self.set_service_state(service, True)
+                if not result["success"]:
+                    self.settings[f"{service}_enabled"] = False
+                    self.save_settings()
+                    decky.logger.error(f"Failed to restore {service}: {result['error']}")
 
         # Автозапуск системного трея на рабочем столе (включен по умолчанию)
         tray_enabled = self.settings.get("desktop_tray_enabled", True)
@@ -278,13 +281,16 @@ class Plugin:
             return {"success": False, "error": f"Invalid service: {service}"}
             
         logger.info(f"Setting service {service} enabled to: {enabled}")
-        self.settings[f"{service}_enabled"] = enabled
-        self.save_settings()
-
         if service == "zapret":
             if enabled:
                 strategy = self.settings.get("current_strategy", DEFAULT_STRATEGIES[0]["args"])
-                self.zapret_manager.start(strategy, HOSTLIST_FILE)
+                try:
+                    self.zapret_manager.start(strategy, HOSTLIST_FILE)
+                except Exception:
+                    if self.settings.get("zapret_enabled") and not self.zapret_manager.is_running():
+                        self.settings["zapret_enabled"] = False
+                        self.save_settings()
+                    raise
             else:
                 self.zapret_manager.stop()
         elif service == "warp":
@@ -297,6 +303,8 @@ class Plugin:
             else:
                 self.warp_manager.stop()
 
+        self.settings[f"{service}_enabled"] = enabled
+        self.save_settings()
         return {"success": True, "service": service, "enabled": enabled}
 
     @_rpc
@@ -320,20 +328,25 @@ class Plugin:
     @_rpc
     async def apply_strategy(self, strategy_args: str) -> dict:
         """Применяет выбранную стратегию. Если передана пустая строка, сбрасывает выбор и выключает службу."""
-        self.settings["current_strategy"] = strategy_args
         if not strategy_args:
-            self.settings["zapret_enabled"] = False
-        self.save_settings()
-        
-        # Если сейчас включен zapret, перезапускаем его с новой стратегией (или выключаем при сбросе)
-        if self.settings.get("zapret_enabled", False):
-            if strategy_args:
-                self.zapret_manager.start(strategy_args, HOSTLIST_FILE)
-            else:
-                self.zapret_manager.stop()
-        else:
             self.zapret_manager.stop()
-            
+            self.settings["zapret_enabled"] = False
+        elif self.settings.get("zapret_enabled", False):
+            previous = self.settings.get("current_strategy") or DEFAULT_STRATEGIES[0]["args"]
+            try:
+                self.zapret_manager.start(strategy_args, HOSTLIST_FILE)
+            except Exception:
+                if not self.zapret_manager.is_running():
+                    try:
+                        self.zapret_manager.start(previous, HOSTLIST_FILE)
+                    except Exception:
+                        logger.exception("Failed to restore previous Zapret strategy")
+                        self.settings["zapret_enabled"] = False
+                        self.save_settings()
+                raise
+
+        self.settings["current_strategy"] = strategy_args
+        self.save_settings()
         return {"success": True, "strategy": strategy_args}
 
     @_rpc
@@ -440,8 +453,7 @@ class Plugin:
                         f"(success_rate={strat_result['success_rate']}, latency={strat_result['avg_latency_ms']}ms)"
                     )
                     worked_strategy = strat_result["args"]
-                    self.settings["autotuned_strategy_name"] = strat_result["name"]
-                    self.save_settings()
+                    worked_strategy_name = strat_result["name"]
                     break
         except Exception as e:
             logger.error(f"Error during autotune test: {e}")
@@ -456,11 +468,18 @@ class Plugin:
         self.zapret_manager.stop()
 
         if worked_strategy:
+            try:
+                self.zapret_manager.start(worked_strategy, HOSTLIST_FILE)
+            except Exception:
+                logger.exception("Failed to start the autotuned Zapret strategy")
+                self.settings["zapret_enabled"] = False
+                self.save_settings()
+                self.autotune_in_progress = False
+                return
+            self.settings["autotuned_strategy_name"] = worked_strategy_name
             self.settings["current_strategy"] = worked_strategy
             self.settings["zapret_enabled"] = True
             self.save_settings()
-            # Запускаем окончательно с оригинальным списком хостов пользователя
-            self.zapret_manager.start(worked_strategy, HOSTLIST_FILE)
             logger.info("Autotune complete. Applied working strategy and enabled Zapret Bypass.")
             await asyncio.sleep(1)
         else:
@@ -487,10 +506,9 @@ class Plugin:
 
         if res["success"]:
             best_args = res["best_strategy_args"]
-            self.settings["current_strategy"] = best_args
-            self.save_settings()
-            if self.settings.get("zapret_enabled", False):
-                self.zapret_manager.start(best_args, HOSTLIST_FILE)
+            applied = await self.apply_strategy(best_args)
+            if not applied["success"]:
+                return applied
             logger.info(f"TTL tuning succeeded: best TTL={res['best_ttl']}")
 
         return {

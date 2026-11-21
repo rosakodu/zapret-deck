@@ -56,6 +56,8 @@ STRINGS = {
         "menu_autostart": "Автозапуск в трее",
         "action_exit": "❌ Закрыть трей",
         "notify_zapret_on": "Zapret включен ({strategy})",
+        "notify_strategy_fail": "Не удалось применить стратегию Zapret",
+        "notify_service_fail": "Не удалось изменить состояние {service}",
         "notify_zapret_off": "Zapret выключен",
         "notify_warp_on": "WARP VPN подключен",
         "notify_warp_off": "WARP VPN отключен",
@@ -84,6 +86,8 @@ STRINGS = {
         "menu_autostart": "Autostart Companion",
         "action_exit": "❌ Exit Tray",
         "notify_zapret_on": "Zapret enabled ({strategy})",
+        "notify_strategy_fail": "Could not apply the Zapret strategy",
+        "notify_service_fail": "Could not change {service} state",
         "notify_zapret_off": "Zapret disabled",
         "notify_warp_on": "WARP VPN connected",
         "notify_warp_off": "WARP VPN disconnected",
@@ -757,15 +761,22 @@ class ZapretDeckTrayApp:
 
     def _set_service(self, service: str, enabled: bool):
         def _worker():
-            self.client.set_service_state(service, enabled)
+            if not self.client.set_service_state(service, enabled):
+                label = tr("zapret_label" if service == "zapret" else "warp_label")
+                self._send_desktop_notification(tr("app_title"), tr("notify_service_fail", service=label))
             time.sleep(0.4)
             self._poll_status_background()
         threading.Thread(target=_worker, daemon=True).start()
 
     def _apply_strategy(self, strategy: str):
         def _worker():
-            self.client.apply_strategy(strategy)
-            self.client.set_service_state("zapret", True)
+            if self.client.apply_strategy(strategy):
+                status = self.client.get_status()
+                if status and not status.get("zapret_enabled"):
+                    if not self.client.set_service_state("zapret", True):
+                        self._send_desktop_notification(tr("app_title"), tr("notify_strategy_fail"))
+            else:
+                self._send_desktop_notification(tr("app_title"), tr("notify_strategy_fail"))
             time.sleep(0.4)
             self._poll_status_background()
         threading.Thread(target=_worker, daemon=True).start()

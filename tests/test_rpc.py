@@ -53,6 +53,40 @@ class TestRpcMethods(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.temp_dir.cleanup()
 
+    async def test_failed_service_start_does_not_persist_enabled(self):
+        with patch.object(self.plugin.zapret_manager, "start", side_effect=RuntimeError("queue busy")):
+            result = await self.plugin.set_service_state("zapret", True)
+        self.assertFalse(result["success"])
+        self.assertIn("queue busy", result["error"])
+        self.assertFalse(self.plugin.settings["zapret_enabled"])
+
+    async def test_tray_api_starts_when_saved_zapret_state_cannot_be_restored(self):
+        self.plugin.settings.update(zapret_enabled=True, desktop_tray_enabled=False)
+        with (
+            patch("main.os.geteuid", return_value=1000),
+            patch("main.ZapretDeckApiServer") as api,
+            patch.object(self.plugin.warp_manager, "cleanup_network"),
+            patch.object(self.plugin.zapret_manager, "destroy_nftables"),
+            patch.object(self.plugin.zapret_manager, "start", side_effect=RuntimeError("queue busy")),
+        ):
+            api.return_value.start = AsyncMock()
+            await self.plugin._main()
+            api.return_value.start.assert_awaited_once()
+        self.assertFalse(self.plugin.settings["zapret_enabled"])
+
+    async def test_failed_strategy_change_restores_previous_strategy(self):
+        previous = self.plugin.settings["current_strategy"]
+        self.plugin.settings["zapret_enabled"] = True
+        with (
+            patch.object(self.plugin.zapret_manager, "start", side_effect=[RuntimeError("failed"), None]) as start,
+            patch.object(self.plugin.zapret_manager, "is_running", return_value=False),
+        ):
+            result = await self.plugin.apply_strategy("--filter-tcp=443")
+        self.assertFalse(result["success"])
+        self.assertTrue(self.plugin.settings["zapret_enabled"])
+        self.assertEqual(self.plugin.settings["current_strategy"], previous)
+        start.assert_called_with(previous, main.HOSTLIST_FILE)
+
     async def test_get_available_fakes(self):
         res = await self.plugin.get_available_fakes()
         self.assertTrue(res["success"])
@@ -113,7 +147,10 @@ start "zapret" /min "%BIN%winws.exe" ^
             }
         ]
 
-        with patch.object(self.plugin.zapret_manager, "start") as mock_start:
+        with (
+            patch.object(self.plugin.zapret_manager, "start") as mock_start,
+            patch.object(self.plugin.warp_manager, "stop"),
+        ):
             await self.plugin._run_autotune()
             self.assertTrue(self.plugin.settings.get("zapret_enabled"))
             self.assertEqual(self.plugin.settings.get("current_strategy"), "--filter-tcp=80,443 --dpi-desync=multisplit")
@@ -138,7 +175,7 @@ start "zapret" /min "%BIN%winws.exe" ^
         mock_status.return_value = {
             "queue_num": 220,
             "is_busy": False,
-            "peer_pid": None,
+            "peer_port_id": None,
         }
         res = await self.plugin.check_queue_status()
         self.assertTrue(res["success"])

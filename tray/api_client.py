@@ -6,8 +6,8 @@ Handles REST requests with fail-safe error handling and timeouts.
 import os
 import sys
 import json
-import urllib.request
-import urllib.error
+import http.client
+import socket
 from typing import Dict, List, Any, Optional
 
 # Ensure plugin root and py_modules are accessible
@@ -19,45 +19,46 @@ if _plugin_dir not in sys.path:
 if _py_modules not in sys.path:
     sys.path.insert(0, _py_modules)
 
-try:
-    from zapret_deck.constants import IPC_HOST, IPC_PORT
-except ImportError:
-    IPC_HOST = "127.0.0.1"
-    IPC_PORT = 45322
+from zapret_deck.constants import IPC_SOCKET_PATH
+
+
+class UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, socket_path: str, timeout: float):
+        super().__init__("localhost", timeout=timeout)
+        self.socket_path = socket_path
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.settimeout(self.timeout)
+        self.sock.connect(self.socket_path)
 
 
 class ZapretDeckApiClient:
     """Client for local zapret-deck daemon."""
 
-    def __init__(
-        self, host: str = IPC_HOST, port: int = IPC_PORT, timeout: float = 3.0
-    ):
-        self.base_url = f"http://{host}:{port}/api"
+    def __init__(self, socket_path: str = IPC_SOCKET_PATH, timeout: float = 8.0):
+        self.socket_path = socket_path
         self.timeout = timeout
 
     def _request(
         self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
-        """Performs HTTP request to the local daemon."""
-        url = f"{self.base_url}{endpoint}"
-        body_bytes = None
-        headers = {"User-Agent": "ZapretDeck-Tray/1.0"}
-
+        headers = {}
+        body = None
         if data is not None:
-            body_bytes = json.dumps(data).encode("utf-8")
-            headers["Content-Type"] = "application/json; charset=utf-8"
+            body = json.dumps(data).encode("utf-8")
+            headers["Content-Type"] = "application/json"
 
-        req = urllib.request.Request(
-            url, data=body_bytes, headers=headers, method=method
-        )
+        connection = UnixHTTPConnection(self.socket_path, self.timeout)
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                resp_data = resp.read().decode("utf-8", errors="replace")
-                if resp_data:
-                    return json.loads(resp_data)
-                return {}
-        except Exception:
+            connection.request(method, f"/api{endpoint}", body=body, headers=headers)
+            with connection.getresponse() as response:
+                if response.status == 200:
+                    return json.loads(response.read())
+        except (OSError, http.client.HTTPException, ValueError):
             return None
+        finally:
+            connection.close()
 
     def is_available(self) -> bool:
         """Checks whether the daemon is actively responding."""

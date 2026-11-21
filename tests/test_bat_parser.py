@@ -223,10 +223,15 @@ class TestZapretManagerIntegration(unittest.TestCase):
         self.temp_dir.cleanup()
 
     @patch("subprocess.Popen")
+    @patch.object(ZapretManager, "_owns_queue", return_value=True)
+    @patch.object(ZapretManager, "is_nfqueue_busy", return_value=False)
     @patch.object(ZapretManager, "setup_nftables")
     @patch.object(ZapretManager, "clear_nftables")
     @patch.object(ZapretManager, "_run_cmd", return_value=(0, "", ""))
-    def test_start_with_bat_parsing(self, mock_run_cmd, mock_clear_nft, mock_setup_nft, mock_popen):
+    def test_start_with_bat_parsing(
+        self, mock_run_cmd, mock_clear_nft, mock_setup_nft, mock_busy, mock_owns_queue, mock_popen
+    ):
+        mock_popen.return_value.poll.return_value = None
         strategy = (
             '--wf-tcp=80,443,2053 --wf-udp=443,50000-50100 '
             '--filter-tcp=80,443 --hostlist="%LISTS%list.txt" '
@@ -240,12 +245,28 @@ class TestZapretManagerIntegration(unittest.TestCase):
         # Popen must be called with resolved shared paths and without --wf-* flags
         self.assertTrue(mock_popen.called)
         called_args = mock_popen.call_args[0][0]
+        self.assertNotIn("--daemon", called_args)
         self.assertNotIn("--wf-tcp=80,443,2053", called_args)
         self.assertNotIn("--wf-udp=443,50000-50100", called_args)
         expected_shared_lists = os.path.join(self.plugin_dir, "shared", "lists", "list.txt")
         expected_shared_bin = os.path.join(self.plugin_dir, "shared", "bin", "quic.bin")
         self.assertIn(f"--hostlist={expected_shared_lists}", called_args)
         self.assertIn(f"--dpi-desync-fake-quic={expected_shared_bin}", called_args)
+
+    @patch("subprocess.Popen")
+    @patch.object(ZapretManager, "is_nfqueue_busy", return_value=False)
+    @patch.object(ZapretManager, "setup_nftables")
+    @patch.object(ZapretManager, "clear_nftables")
+    @patch.object(ZapretManager, "_run_cmd", return_value=(0, "", ""))
+    def test_early_exit_cleans_up_without_installing_rules(
+        self, mock_run_cmd, mock_clear_nft, mock_setup_nft, mock_busy, mock_popen
+    ):
+        mock_popen.return_value.poll.return_value = 2
+        with self.assertRaisesRegex(RuntimeError, "nfqws exited with code 2"):
+            self.manager.start("--filter-tcp=443")
+        mock_setup_nft.assert_not_called()
+        mock_clear_nft.assert_called_once()
+        self.assertFalse(self.manager.is_running())
 
     def test_parse_strategy_method(self):
         parsed = self.manager.parse_strategy("--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=split2")

@@ -1,9 +1,8 @@
 import os
 import subprocess
 import logging
-import signal
 import shutil
-import shlex
+import time
 
 try:
     from zapret_deck.bat_parser import parse_strategy_string, ParsedStrategy
@@ -31,33 +30,50 @@ class ZapretManager:
         self.log_file = os.path.join(plugin_dir, "zapret.log")
         self.fakes_manager = FakesManager(os.path.join(plugin_dir, "bin"), shared_dir=shared_dir)
         self.game_filter = GameFilterManager(enabled=True)
+        self.process = None
 
     def is_nfqueue_busy(self, queue_num: int = QUEUE_NUM) -> bool:
         """Проверяет, занята ли очередь NFQUEUE другим процессом."""
         status = check_nfqueue_status(queue_num)
         return status.get("is_busy", False)
 
-    def cleanup_nfqueue(self, queue_num: int = QUEUE_NUM) -> bool:
-        """Принудительно освобождает очередь NFQUEUE и завершает зависшие процессы."""
-        logger.info(f"Cleaning up NFQUEUE {queue_num}...")
-        status = check_nfqueue_status(queue_num)
-        peer_pid = status.get("peer_pid")
-        if peer_pid and peer_pid > 1:
-            logger.info(f"Terminating queue holder process PID {peer_pid}")
-            self._run_cmd(["kill", "-15", str(peer_pid)])
-            self._run_cmd(["kill", "-9", str(peer_pid)])
+    def _owns_queue(self, pid: int) -> bool:
+        status = check_nfqueue_status(QUEUE_NUM)
+        port_id = status.get("peer_port_id")
+        if port_id is None:
+            return False
 
-        self._run_cmd(["pkill", "-9", "-f", self.bin_path])
-        self._run_cmd(["pkill", "-9", "-f", f"nfqws.*{queue_num}"])
-        self.clear_nftables()
-        return not self.is_nfqueue_busy(queue_num)
+        # The queue reports a Netlink port ID. Match its socket inode to a
+        # descriptor belonging to the child, since port IDs are not OS PIDs.
+        try:
+            with open(f"/proc/{pid}/net/netlink", encoding="ascii") as sockets:
+                next(sockets, None)
+                for line in sockets:
+                    fields = line.split()
+                    if len(fields) >= 10 and fields[1:3] == ["12", str(port_id)]:
+                        inode = f"socket:[{fields[9]}]"
+                        for fd in os.scandir(f"/proc/{pid}/fd"):
+                            try:
+                                if os.readlink(fd.path) == inode:
+                                    return True
+                            except FileNotFoundError:
+                                continue
+                        return False
+        except OSError:
+            return False
+        return False
 
-    def ensure_queue_available(self, queue_num: int = QUEUE_NUM) -> bool:
-        """Гарантирует доступность NFQUEUE перед стартом, выполняя автоочистку при занятости."""
-        if self.is_nfqueue_busy(queue_num):
-            logger.warning(f"NFQUEUE {queue_num} is occupied. Performing auto-cleanup...")
-            return self.cleanup_nfqueue(queue_num)
-        return True
+    def _wait_for_queue(self, process: subprocess.Popen):
+        deadline = time.monotonic() + 3
+        while True:
+            exit_code = process.poll()
+            if exit_code is not None:
+                raise RuntimeError(f"nfqws exited with code {exit_code}. See {self.log_file}")
+            if self._owns_queue(process.pid):
+                return
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"nfqws did not bind NFQUEUE {QUEUE_NUM}. See {self.log_file}")
+            time.sleep(0.05)
 
     def _run_cmd(self, cmd: list) -> tuple:
         """Вспомогательный метод для запуска системных команд"""
@@ -73,8 +89,7 @@ class ZapretManager:
 
     def is_running(self) -> bool:
         """Проверяет, запущен ли nfqws"""
-        rc, stdout, _ = self._run_cmd(["pgrep", "-f", self.bin_path])
-        return rc == 0 and bool(stdout)
+        return self.process is not None and self.process.poll() is None
 
     def clear_nftables(self):
         """Очищает правила в цепочке nftables, созданной плагином"""
@@ -152,10 +167,11 @@ class ZapretManager:
     def start(self, strategy_args: str, hostlist_file: str = None):
         """Запускает nfqws с выбранной стратегией"""
         logger.info(f"Starting zapret (nfqws) with strategy args: {strategy_args}")
+        parsed = parse_strategy_string(strategy_args)
         self.stop()
-        self.ensure_queue_available(QUEUE_NUM)
+        if self.is_nfqueue_busy():
+            raise RuntimeError(f"NFQUEUE {QUEUE_NUM} is already in use")
 
-        import shutil
         shared_dir = self.shared_dir
         shared_lists = os.path.join(shared_dir, "lists")
         shared_bin = os.path.join(shared_dir, "bin")
@@ -213,11 +229,6 @@ class ZapretManager:
             logger.error(f"Failed to prepare shared directory: {e}")
             raise e
 
-        # Парсим стратегию (поддерживаются .bat файлы, winws и nfqws строки)
-        parsed = parse_strategy_string(strategy_args)
-        tcp_ports = parsed.tcp_ports
-        udp_ports = parsed.udp_ports
-
         filtered_args = []
         for arg in parsed.clean_args_list:
             # Заменяем плейсхолдеры на пути к ОБЩЕЙ папке, доступной для nobody
@@ -231,39 +242,37 @@ class ZapretManager:
             )
             filtered_args.append(arg_replaced)
 
-        # 1. Создаем nftables правила перед стартом демона
-        self.setup_nftables(tcp_ports, udp_ports)
-
-        # 2. Формируем финальные аргументы nfqws
-        args = [
-            self.bin_path,
-            f"--qnum={QUEUE_NUM}",
-            "--daemon",
-            "--user=nobody"
-        ]
-        args.extend(filtered_args)
-
+        args = [self.bin_path, f"--qnum={QUEUE_NUM}", "--user=nobody", *filtered_args]
         try:
-            logger.info(f"Executing: {' '.join(args)}")
-            # Запускаем в фоновом режиме
+            logger.info("Starting nfqws. Log file: %s", self.log_file)
+            clean_env = os.environ.copy()
+            clean_env.pop("LD_LIBRARY_PATH", None)
             with open(self.log_file, "a") as log:
-                subprocess.Popen(
-                    args,
-                    stdout=log,
-                    stderr=log,
-                    start_new_session=True
+                self.process = subprocess.Popen(
+                    args, stdout=log, stderr=log, start_new_session=True, env=clean_env
                 )
-            logger.info("Zapret (nfqws) started successfully")
-        except Exception as e:
-            self.clear_nftables()
-            logger.error(f"Failed to start nfqws: {e}")
-            raise e
+            self._wait_for_queue(self.process)
+            self.setup_nftables(parsed.tcp_ports, parsed.udp_ports)
+            if not self.is_running():
+                raise RuntimeError(f"nfqws exited during startup. See {self.log_file}")
+        except Exception:
+            self.stop()
+            raise
+        logger.info("Zapret (nfqws) started successfully")
 
     def stop(self):
-        """Останавливает nfqws и очищает nftables и NFQUEUE"""
-        logger.info("Stopping zapret...")
-        self.cleanup_nfqueue(QUEUE_NUM)
-        logger.info("Zapret stopped and cleaned up")
+        """Remove plugin rules and stop the child process owned by this manager."""
+        if self.process is None:
+            return
+        self.clear_nftables()
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=2)
+        self.process = None
 
     def parse_strategy(self, strategy_input: str) -> ParsedStrategy:
         """Парсит строку стратегии или .bat/.cmd файл."""

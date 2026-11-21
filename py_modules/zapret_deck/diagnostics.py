@@ -129,13 +129,13 @@ def check_nfqueue_status(queue_num: int = 220, proc_path: str = "/proc/net/netfi
     for line in content.splitlines():
         parts = line.split()
         if parts and parts[0] == str(queue_num):
-            peer_pid = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
+            peer_port_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
             queue_total = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
             user_dropped = int(parts[6]) if len(parts) > 6 and parts[6].isdigit() else 0
             return {
                 "queue_num": queue_num,
                 "is_busy": True,
-                "peer_pid": peer_pid,
+                "peer_port_id": peer_port_id,
                 "queue_total": queue_total,
                 "user_dropped": user_dropped,
             }
@@ -143,7 +143,7 @@ def check_nfqueue_status(queue_num: int = 220, proc_path: str = "/proc/net/netfi
     return {
         "queue_num": queue_num,
         "is_busy": False,
-        "peer_pid": None,
+        "peer_port_id": None,
         "queue_total": 0,
         "user_dropped": 0,
     }

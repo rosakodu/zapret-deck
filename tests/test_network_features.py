@@ -2,7 +2,7 @@
 tests/test_network_features.py - Unit tests for:
 1. GameFilter (py_modules/zapret_deck/gamefilter.py)
 2. Network Diagnostics & DoH DNS Spoofing (py_modules/zapret_deck/diagnostics.py)
-3. NFQUEUE 220 check and auto-cleanup in ZapretManager (py_modules/zapret_deck/zapret_manager.py)
+3. NFQUEUE 220 conflict detection in ZapretManager (py_modules/zapret_deck/zapret_manager.py)
 """
 
 import os
@@ -181,7 +181,7 @@ class TestDiagnostics(unittest.TestCase):
         with patch("builtins.open", mock_open(read_data=proc_data)):
             status = check_nfqueue_status(220)
             self.assertTrue(status["is_busy"])
-            self.assertEqual(status["peer_pid"], 54321)
+            self.assertEqual(status["peer_port_id"], 54321)
             self.assertEqual(status["queue_total"], 10)
 
     @patch("os.path.isfile", return_value=True)
@@ -191,7 +191,7 @@ class TestDiagnostics(unittest.TestCase):
         with patch("builtins.open", mock_open(read_data=proc_data)):
             status = check_nfqueue_status(220)
             self.assertFalse(status["is_busy"])
-            self.assertIsNone(status["peer_pid"])
+            self.assertIsNone(status["peer_port_id"])
 
     @patch("urllib.request.urlopen")
     def test_resolve_doh(self, mock_urlopen):
@@ -258,33 +258,30 @@ class TestZapretManagerNetworkFeatures(unittest.TestCase):
     @patch("zapret_deck.zapret_manager.check_nfqueue_status")
     def test_is_nfqueue_busy(self, mock_queue_status):
         """Проверка вызова проверки занятости очереди."""
-        mock_queue_status.return_value = {"is_busy": True, "peer_pid": 9999}
+        mock_queue_status.return_value = {"is_busy": True, "peer_port_id": 9999}
         self.assertTrue(self.manager.is_nfqueue_busy(220))
 
-        mock_queue_status.return_value = {"is_busy": False, "peer_pid": None}
+        mock_queue_status.return_value = {"is_busy": False, "peer_port_id": None}
         self.assertFalse(self.manager.is_nfqueue_busy(220))
 
-    @patch.object(ZapretManager, "is_nfqueue_busy", return_value=False)
-    @patch.object(ZapretManager, "clear_nftables")
-    @patch.object(ZapretManager, "_run_cmd", return_value=(0, "", ""))
-    @patch("zapret_deck.zapret_manager.check_nfqueue_status", return_value={"peer_pid": 12345})
-    def test_cleanup_nfqueue(self, mock_status, mock_run_cmd, mock_clear, mock_busy):
-        """Проверка завершения процесса, удерживающего очередь, и очистки nftables."""
-        success = self.manager.cleanup_nfqueue(220)
-        self.assertTrue(success)
-        mock_clear.assert_called_once()
-        # Проверяем отправку сигналов завершения процессу PID 12345
-        kill_cmds = [call[0][0] for call in mock_run_cmd.call_args_list]
-        self.assertIn(["kill", "-15", "12345"], kill_cmds)
-        self.assertIn(["kill", "-9", "12345"], kill_cmds)
-
     @patch.object(ZapretManager, "is_nfqueue_busy", return_value=True)
-    @patch.object(ZapretManager, "cleanup_nfqueue", return_value=True)
-    def test_ensure_queue_available_triggers_cleanup(self, mock_cleanup, mock_busy):
-        """Если очередь занята, вызывается автоочистка."""
-        res = self.manager.ensure_queue_available(220)
-        self.assertTrue(res)
-        mock_cleanup.assert_called_once_with(220)
+    @patch.object(ZapretManager, "_run_cmd")
+    def test_start_refuses_busy_queue_without_running_system_commands(self, mock_run_cmd, mock_busy):
+        with self.assertRaisesRegex(RuntimeError, "NFQUEUE 220 is already in use"):
+            self.manager.start("--filter-tcp=443")
+        mock_run_cmd.assert_not_called()
+
+    @patch.object(ZapretManager, "clear_nftables")
+    @patch("subprocess.Popen")
+    def test_stop_terminates_only_owned_child(self, mock_popen, mock_clear):
+        child = mock_popen.return_value
+        child.poll.return_value = None
+        self.manager.process = child
+        self.manager.stop()
+        child.terminate.assert_called_once()
+        child.wait.assert_called_once_with(timeout=2)
+        mock_clear.assert_called_once()
+        self.assertIsNone(self.manager.process)
 
     @patch.object(ZapretManager, "clear_nftables")
     @patch.object(ZapretManager, "_run_cmd", return_value=(0, "", ""))

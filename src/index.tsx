@@ -33,7 +33,7 @@ interface StrategyInfo {
 const getStatus = callable<[], StatusInfo>("get_status");
 const setServiceState = callable<[string, boolean], { success: boolean; service?: string; enabled?: boolean; error?: string }>("set_service_state");
 const getStrategies = callable<[], StrategyInfo[]>("get_strategies");
-const applyStrategy = callable<[string], { success: boolean; strategy?: string }>("apply_strategy");
+const applyStrategy = callable<[string], { success: boolean; strategy?: string; error?: string }>("apply_strategy");
 const generateWarp = callable<[], { success: boolean }>("generate_warp");
 const startAutotune = callable<[], { success: boolean; error?: string }>("start_autotune");
 const getSteamLanguage = callable<[], string>("get_steam_language");
@@ -504,6 +504,8 @@ const Content = () => {
           title: t.success,
           body: isSelected ? "Выбор стратегии отменен" : t.appliedStrategy,
         });
+      } else {
+        toaster.toast({ title: t.error, body: res.error || t.error });
       }
       refreshStatus();
     } catch (e) {
